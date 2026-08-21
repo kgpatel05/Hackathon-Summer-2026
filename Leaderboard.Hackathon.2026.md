@@ -1,38 +1,41 @@
 # Leaderboard for GIDS Biomedical Data Hackathon 2026
 
--   **time stamp:** “19 August, 2026 15:00:06”
+-   **time stamp:** “21 August, 2026 15:00:39”
+
 
 
 | pseudonym                | accuracy |   kappa |
 |:-------------------------|---------:|--------:|
-| codex power              |   0.8138 |  0.8019 |
-| Biostat Ted              |   0.7786 |  0.7638 |
-| Jfeld                    |   0.7784 |  0.7647 |
+| Overfit Happens          |   0.9038 |  0.8977 |
+| codex power              |   0.8134 |  0.8015 |
+| Jfeld                    |   0.8120 |  0.8001 |
+| N=4!                     |   0.7980 |  0.7852 |
+| Biostat Ted              |   0.7806 |  0.7660 |
+| 60hahsm                  |   0.7728 |  0.7577 |
 | Cookie Monster           |   0.7716 |  0.7565 |
-| Overfit Happens          |   0.7656 |  0.7504 |
-| Small Potato Predictions |   0.7616 |  0.7459 |
-| N=4!                     |   0.7580 |  0.7427 |
-| Apologia                 |   0.7548 |  0.7381 |
-| XDRKAMOA                 |   0.7522 |  0.7356 |
-| VHS                      |   0.7408 |  0.7234 |
-| H-Net                    |   0.7392 |  0.7203 |
-| 60hahsm                  |   0.7358 |  0.7177 |
-| Dossier                  |   0.7202 |  0.7012 |
+| VHS                      |   0.7688 |  0.7538 |
+| Small Potato Predictions |   0.7666 |  0.7513 |
+| H-Net                    |   0.7626 |  0.7473 |
+| Apologia                 |   0.7614 |  0.7456 |
+| XDRKAMOA                 |   0.7590 |  0.7431 |
+| JVB2026                  |   0.7506 |  0.7338 |
+| Diversity                |   0.7458 |  0.7289 |
+| SelFISHly Altruistic     |   0.7362 |  0.7168 |
+| MGCG                     |   0.7340 |  0.7164 |
+| Pluto                    |   0.7304 |  0.7122 |
+| Dossier                  |   0.7168 |  0.6972 |
 | Hibbinslings             |   0.6908 |  0.6750 |
 | Vela Pulsar              |   0.6450 |  0.6222 |
 | TinyCoder                |   0.4964 |  0.4645 |
-| Diversity                |   0.4778 |  0.4310 |
+| Genetic Drifters         |   0.4614 |  0.4305 |
 | Cadenza                  |   0.0560 | -0.0020 |
 | MF                       |   0.0560 | -0.0020 |
+| Vector                   |   0.0560 | -0.0020 |
 | Spencer                  |   0.0560 | -0.0020 |
-| Genetic Drifters         |   0.0560 | -0.0020 |
-| MGCG                     |   0.0560 | -0.0020 |
-| JVB2026                  |   0.0560 | -0.0020 |
 | Right and Left           |   0.0560 | -0.0020 |
 | FLY                      |   0.0560 | -0.0020 |
 | YEAST                    |   0.0560 | -0.0020 |
 | AT                       |   0.0560 | -0.0020 |
-| Pluto                    |   0.0560 | -0.0020 |
 
 ***Scoring:***
 
@@ -61,17 +64,15 @@ formatted files at:
 <https://raw.githubusercontent.com/_CAPTAIN.HANDLE_/Hackathon-Summer-2026/main/prediction/prediction.csv>.
 Please read instructions carefully.*
 
-| pseudonym            |
-|:---------------------|
-| FIFAboy              |
-| Hooray               |
-| RNA Ranger           |
-| SelFISHly Altruistic |
-| solo_ventures        |
-| hihi                 |
-| Vector               |
-| Aristocytes          |
-| LeBonBon             |
-| BMJA                 |
-| S.R                  |
-| LN                   |
+| pseudonym     |
+|:--------------|
+| FIFAboy       |
+| Hooray        |
+| RNA Ranger    |
+| solo_ventures |
+| hihi          |
+| Aristocytes   |
+| LeBonBon      |
+| BMJA          |
+| S.R           |
+| TL            |
