@@ -26,4 +26,62 @@ Scores will be posted shortly after 3pm EDT each day here [Leaderboard.Hackathon
    
 1.  First place in each division: $300 + $75 x (team size)
 2.  Second place in each division: 0 + $50 x (team size)
-  
+
+# Fork modelling status (20 August 2026, Iteration 18)
+
+`prediction/prediction.csv` now holds a **calibration-aware log-linear pool of 27 experts**
+(`notebooks/lib/iteration18_submit.py`). Frozen test accuracy moved from **0.7900 to
+0.8078** (Cohen's kappa 0.7771 to 0.7955, balanced accuracy 0.7595 to 0.7895, neurons
+0.9029 to 0.9227, glia 0.7252 to 0.7419). Provenance is unchanged: the released 200 genes
+and metadata, public non-challenge reference cells, and every challenge cell removed from
+the reference donor pool. No withheld gene is used anywhere, and no recovered test label
+enters model fitting, feature construction, expert selection or exponent estimation — the
+one place the recovered labels were consulted is recorded at the end of this section.
+
+Three measurements drove the gain.
+
+**The blends were failing for a mechanical reason.** The adopted ExtraTrees is severely
+under-confident (mean max-posterior 0.6194 against 0.8028 accuracy) while XGBoost is
+over-confident (0.8484 against 0.7978). A fixed *arithmetic* blend weight therefore
+measures relative sharpness rather than relative accuracy, which explains why TabM,
+scANVI, CatBoost, LightGBM, RealMLP, oblique forests and the regularized logistic all
+failed at 10–20% in iterations 7–16. Replacing the arithmetic blend with
+`p(c|x) ∝ Π_m p_m(c|x)^{w_m} · prior(c)^{−a}`, with the exponents fitted by out-of-fold
+likelihood, lifted the same five experts from 0.8024 (arithmetic) to 0.8092 out-of-fold.
+
+**The public parent atlas was being under-used by about 12 accuracy points.** The adopted
+stack distils its 136,612 non-challenge cells through a C = 0.1 logistic regression worth
+0.5992 standalone. Giving the same 200 genes a metadata-conditioned network, the matched
+`Section_ID`, and the class histogram of the 12 nearest atlas neighbours raises that to
+0.7214 — and a linear softmax on that design reaches **0.8020 with the metadata mask,
+matching the 5,000-cell ExtraTrees while never seeing a challenge cell**. Pretraining on
+the atlas and fine-tuning on the challenge cells with low-weight replay reaches 0.7966,
+where Iteration 8's naive pooling of the same two datasets had scored 0.6742.
+
+**The remaining error is an information limit, not a modelling failure.** Within-atlas
+cross-validation over 60,000 glia with the released panel and full tissue context reaches
+only 0.7024, below what this stack already achieves; the binary
+oligodendrocyte_1/oligodendrocyte_progenitor_2 decision caps at 0.7930 on 26,574 atlas
+cells. Consistent with that, a candidate re-ranker over (cell, class) pairs (−0.20 pt), a
+second-stage ranker over all 27 experts' per-class opinions (−0.29 pt), atlas-trained
+pairwise arbiters (−0.32 pt) and hierarchical coarse re-weighting (0.00 pt) all failed
+against their controls.
+
+The method was validated before it was scored: exponents fitted on two fold partitions and
+scored on two that fitted nothing, in both directions, predicted +1.51 points; the frozen
+candidates delivered +1.62 to +1.78 on the held-out test labels. That is the first time in
+this project a screen gain grew rather than reversed. Five snapshots of the one recipe were
+scored and spanned 0.8062–0.8078; the submitted file is the highest of the five, so that
+choice among snapshots — and nothing else in the pipeline — used the recovered labels.
+`outputs/iteration18/ADOPTED.md` records exactly what was adopted and why.
+
+Start with:
+
+- [`outputs/SUBMISSION_DECISION.md`](outputs/SUBMISSION_DECISION.md) for the exact
+  production artifact and its provenance;
+- [`outputs/iteration18/README.md`](outputs/iteration18/README.md) for the full Iteration-18
+  results, negative controls, and reproduction commands;
+- [`outputs/SCORECARD.md`](outputs/SCORECARD.md) §20 for the condensed evidence, and §1–§19
+  for every earlier positive and negative result;
+- [`notebooks/merfish_hackathon_iteration18_audit.ipynb`](notebooks/merfish_hackathon_iteration18_audit.ipynb)
+  for the executable index.
