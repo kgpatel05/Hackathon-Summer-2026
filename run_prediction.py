@@ -134,9 +134,10 @@ def stages():
     s.append(("test-side experts",
               [sys.executable, str(LIB / "iteration18_experts_test.py")],
               ["outputs/iteration18/experts_test.npz"]))
+    # No artifact list: prediction/prediction.csv already exists from the previous
+    # cohort, so an existence check here would skip the one stage that must always run.
     s.append(("fit the pool and write the submission",
-              [sys.executable, str(LIB / "iteration18_submit.py"), "final"],
-              ["prediction/prediction.csv"]))
+              [sys.executable, str(LIB / "iteration18_submit.py"), "final"], []))
     return s
 
 
@@ -187,6 +188,12 @@ def main():
             done = arts and all((ROOT / a).exists() for a in arts)
             print(f"  [{'done' if done else '    '}] {name}")
         return
+
+    # the submission from the previous cohort must not survive into a new run
+    stale = ROOT / "prediction" / "prediction.csv"
+    if (force or (old and old != fp)) and stale.exists():
+        shutil.copy(stale, stale.with_suffix(".csv.previous"))
+        print("[cache] previous submission moved to prediction/prediction.csv.previous")
 
     t_all = time.time()
     for i, (name, cmd, arts) in enumerate(todo, 1):

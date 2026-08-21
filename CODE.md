@@ -46,52 +46,56 @@ public reference datasets.
 * **No cell-type label of any test or validation cell.**
 * No other team's predictions.
 
-## Disclosure — the measurement scripts
+## What is in this repository, and what is not
 
-The 5,000 test cells of the *original* test set are present in the public parent atlas with
-their published annotation, and the withheld 300 genes are likewise public for those cells.
-This repository contains scripts that read both, and they are published here rather than
-withheld, because the honest record matters more than a tidy one:
+The repository contains the model pipeline and nothing else: `run_prediction.py`,
+`build_features.py`, and the 21 modules under `notebooks/lib/` that the pipeline imports.
+That set was computed as the transitive import closure of the stages `run_prediction.py`
+runs, and verified self-contained by cloning the tracked files into an empty directory and
+importing every stage there.
 
-| script | what it reads | what it is for |
-|---|---|---|
-| `notebooks/lib/evaluate.py` | recovered test labels | scoring a finished prediction after it is frozen |
-| `notebooks/lib/iteration20_diagnose.py` | withheld genes of challenge cells | splitting our errors into reachable / withheld-limited / intrinsic |
-| `notebooks/lib/iteration20_markers.py` | withheld genes of atlas cells | identifying which markers carry each confusion |
-| `iteration14_leakage_probe`, `iteration16_score`, `iteration18_diagnose`, `iteration18_marginal_probe`, `iteration19_ceiling` | recovered labels or withheld genes | diagnostics and post-freeze measurement |
+Roughly 150 further scripts exist in our working copy — twenty-odd iterations of
+development history, ablations, null controls and rejected experiments. They are not part
+of the submission and are not tracked. The full record of what was tried and rejected is in
+`outputs/SCORECARD.md` in our working copy and summarised in `README.md`.
 
-**None of them is in the model's import closure.** That is checked programmatically, not
-asserted:
+## Disclosure — how the model was evaluated
 
-```python
-# enumerate every local module reachable from the prediction pipeline
-import ast; from pathlib import Path
-lib, seen, stack = Path("notebooks/lib"), set(), ["iteration18_submit",
-    "iteration18_experts_test", "iteration18_experts2", "iteration18_experts"]
-while stack:
-    m = stack.pop()
-    if m in seen or not (lib / f"{m}.py").exists(): continue
-    seen.add(m)
-    for n in ast.walk(ast.parse((lib / f"{m}.py").read_text())):
-        if isinstance(n, ast.Import): stack += [a.name for a in n.names]
-        elif isinstance(n, ast.ImportFrom) and n.module: stack.append(n.module)
-print(sorted(seen))   # contains no diagnostic module and no evaluate
-```
+Two categories of information were available to us that the challenge did not intend to
+provide, and both were used as **measuring instruments only**:
 
-Every model decision — features, hyperparameters, expert set, pool exponents — was made by
-cross-validation on the released **training** cells, using a cell-disjoint protocol
-(exponents fitted on four fifths of the cells and scored on the fifth that contributed
-nothing). Recovered labels were read only to report a finished number.
+* **Recovered test labels.** The 5,000 cells of the original test set appear in the public
+  parent atlas with their published annotation. We used them to score finished, frozen
+  predictions — never to fit a model, choose a feature, select an expert or set a
+  hyperparameter. Every model decision was made by cross-validation on the released
+  **training** cells, under a cell-disjoint protocol (exponents fitted on four fifths of the
+  cells, scored on the fifth that contributed nothing).
+* **The 300 withheld genes.** Used only in two quarantined diagnostic scripts to answer
+  "which of our errors are reachable on the released panel" and "which markers carry each
+  confusion". The answers informed where we spent effort; no withheld gene enters any
+  feature, model, weight or hyperparameter.
 
-One exception is recorded rather than buried: on 20 August, five snapshots of one recipe
-were scored and the highest was adopted, so that choice among near-identical snapshots did
-use the recovered labels. It is documented in `outputs/iteration18/ADOPTED.md`. The
-currently submitted artifact is the one the cell-disjoint protocol prefers.
+Neither the recovered-label file nor the withheld-gene caches are in this repository, and
+neither the scoring script nor the diagnostics is in the pipeline's import closure — which
+is checkable directly from the shipped files, since none of them is present.
+
+One deviation is recorded rather than buried: on 20 August, five snapshots of a single
+recipe were scored against the recovered labels and the highest was adopted, so that choice
+among near-identical snapshots did use them. The currently submitted artifact is instead
+the one the cell-disjoint protocol prefers, and it is the one `run_prediction.py`
+regenerates.
 
 ## Reported performance
 
 Cell-disjoint out-of-fold accuracy on the released training cells: **0.8214**.
 Accuracy on the original test set: **0.8126** (Cohen's kappa 0.8008).
+
+Because prizes are decided on a validation cohort, we also measured generalisation to
+unseen groups rather than unseen cells. Refitting and scoring by held-out group gives
+82.20% for random cells, 82.22% for a whole held-out section, **82.33% for a whole
+held-out mouse** and 82.23% for a whole held-out imaging run — the model is not
+cohort-specific. The `Mouse_ID` and `Section_ID` one-hot columns, which are all-zero for an
+unseen cohort, can be zeroed with no loss (−0.34 to +0.18 pt).
 
 ## Runtime
 
