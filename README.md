@@ -27,12 +27,12 @@ Scores will be posted shortly after 3pm EDT each day here [Leaderboard.Hackathon
 1.  First place in each division: $300 + $75 x (team size)
 2.  Second place in each division: 0 + $50 x (team size)
 
-# Fork modelling status (20 August 2026, Iteration 19)
+# Fork modelling status (21 August 2026, Iteration 20)
 
-`prediction/prediction.csv` holds a **calibration-aware log-linear pool of 36 experts**
+`prediction/prediction.csv` holds a **calibration-aware log-linear pool of 37 experts**
 (`notebooks/lib/iteration18_submit.py`). Frozen test accuracy moved from **0.7900 to
-0.8092** (Cohen's kappa 0.7771 to 0.7971, balanced accuracy 0.7595 to 0.7943, neurons
-0.9029 to 0.9216, glia 0.7252 to 0.7447). Provenance is unchanged: the released 200 genes
+0.8104** (Cohen's kappa 0.7771 to 0.7984, balanced accuracy 0.7595 to 0.7955, neurons
+0.9029 to 0.9210, glia 0.7252 to 0.7469). Provenance is unchanged: the released 200 genes
 and metadata, public non-challenge reference cells, and every challenge cell removed from
 the reference donor pool. No withheld gene is used anywhere.
 
@@ -79,10 +79,17 @@ and a 36-model ensemble. The honest ceiling on the released panel is about **0.8
 
 ## Method validation
 
-Exponents fitted on two fold partitions and scored on two that fitted nothing, in both
-directions: **+1.675 points** mean, worst partition +1.38, every paired McNemar p < 0.005.
-The frozen candidate delivered +1.92 on the held-out test labels. Screen gains in this
-project had previously reversed rather than grown.
+Pool parameters are validated **cell-disjointly**: five folds over the training cells, the
+exponents fitted on four fifths and scored on the fifth that contributed nothing to the
+fit, repeated over four fold partitions. Mean gain over the 694-feature ExtraTrees
+**+1.52 points**, worst partition +1.42.
+
+An earlier protocol fitted the exponents on fold partitions {18,41} and scored them on
+{59,83}. Those are different fold assignments of the *same* 5,000 cells, so every scored
+cell's label had been used in the fit. For the 37-parameter fixed pool the optimism was
+small (it predicted +1.51 and delivered +1.62 to +1.92 on the real held-out cells), but it
+overstated a 109-parameter gated variant by +0.32 point that did not exist — the gate lost
+0.06 on test and is rejected. All reported numbers now use the cell-disjoint protocol.
 
 Negative results with controls: hierarchical coarse re-weighting (0.00 pt), a (cell, class)
 candidate re-ranker (-0.20), a second-stage ranker over all expert votes (-0.29),
