@@ -23,6 +23,9 @@ import iteration18_classfeat as CF
 import iteration5_features as F
 
 TOPK = 8
+# Column offsets of the adopted 694-wide stack.  These are only used by the candidate
+# ranker, which is NOT part of the deployed pool (it is excluded by name in
+# iteration18_submit), so a widened metadata block cannot affect the submission.
 BLOCKS = {"BASE": (0, 371), "EXT": (371, 431), "SPA": (431, 439), "NIC": (439, 469),
           "COMP": (469, 530), "ANIC": (530, 560), "ATL": (560, 620),
           "ATL_ET": (620, 680), "COARSE": (680, 694)}

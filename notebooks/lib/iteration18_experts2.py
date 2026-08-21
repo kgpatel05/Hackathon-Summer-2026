@@ -26,8 +26,18 @@ import iteration18_atlasnn as ANN
 import iteration5_features as F
 import iteration5_models as M
 
-GENE_SLICE = slice(0, 209)
-CTX_SLICE = slice(200, 694)
+import iteration15_optimal_transport as _I15
+
+GENE_SLICE = slice(0, 209)          # 200 genes + 9 QC columns, always at the front
+
+
+def _blocks():
+    return _I15.block_offsets()
+
+
+def ctx_slice():
+    """Everything except the raw gene columns, whatever the stack width is."""
+    return slice(200, _blocks()["TOTAL"][1])
 
 
 def _fixed_experts(data, n_train):
@@ -46,9 +56,9 @@ def _fixed_experts(data, n_train):
             "atlasnn": fine[:n_train].astype(np.float32),
             # the adopted feature stack already contains three external posteriors;
             # they are fold-independent, so they are free additional pool members
-            "sni": _norm(x[:, 371:431]),
-            "atlaslr": _norm(x[:, 560:620]),
-            "atlaset": _norm(x[:, 620:680]),
+            "sni": _norm(x[:, slice(*_blocks()["EXT"])]),
+            "atlaslr": _norm(x[:, slice(*_blocks()["ATL"])]),
+            "atlaset": _norm(x[:, slice(*_blocks()["ATL_ET"])]),
             **{k: np.load(B.OUT / f"refnn_{k}.npz")["probs"][:n_train].astype(np.float32)
                for k in ("atlasnn2", "atlasnn_md", "sninn")
                if (B.OUT / f"refnn_{k}.npz").exists()},
@@ -363,7 +373,7 @@ def run(seed=18, folds=5, names=("etnog", "etgene", "nb", "knnp")):
                     p = E.expert_xgb(Xa[fit], y[fit], Xa[val], classes)
                 out[val] = p / np.maximum(p.sum(1, keepdims=True), 1e-12)
         else:
-            sl = GENE_SLICE if name == "etgene" else CTX_SLICE
+            sl = GENE_SLICE if name == "etgene" else ctx_slice()
             out = np.zeros((len(y), len(classes)), np.float32)
             for fit, val in splits:
                 p = M.fit_extra_trees(X[fit][:, sl], pd.Series(y[fit]), list(classes),

@@ -367,14 +367,18 @@ def _atlas_neighbour_setup(meta_all):
     sections = np.array([sec_cat[c] if c >= 0 else "NA" for c in sec_codes])
 
     position = {c: i for i, c in enumerate(ids)}
-    missing = [c for c in meta_all.index.astype(str) if c not in position]
+    present = [c for c in meta_all.index.astype(str) if c in position]
+    missing = len(meta_all) - len(present)
     if missing:
-        raise ValueError(f"{len(missing)} challenge cells absent from the parent atlas")
+        # The validation cohort that replaces meta_test.csv after 3pm 8/22 need not be a
+        # subset of the public atlas.  Cells that are not in it simply cannot leak into
+        # the donor pool, so there is nothing to remove and nothing to fail on.
+        print(f"[atlas-neighbours] {missing} of {len(meta_all)} query cells are not in "
+              f"the parent atlas; the donor pool excludes the {len(present)} that are")
     is_challenge = np.zeros(len(ids), bool)
-    is_challenge[[position[c] for c in meta_all.index.astype(str)
-                  if c in position]] = True
+    is_challenge[[position[c] for c in present]] = True
     donors = np.flatnonzero(~is_challenge)
-    assert len(donors) == len(ids) - len(meta_all), "donor pool contains challenge cells"
+    assert len(donors) == len(ids) - len(present), "donor pool contains challenge cells"
     return ids, labels, sections, ax, ay, donors
 
 

@@ -36,9 +36,10 @@ def main(names=None):
         z = np.maximum(np.asarray(z, np.float32), 1e-6)
         return z / z.sum(1, keepdims=True)
 
-    fixed = {"sni": _norm(Xte[:, 371:431]),
-             "atlaslr": _norm(Xte[:, 560:620]),
-             "atlaset": _norm(Xte[:, 620:680])}
+    _b = E2._blocks()
+    fixed = {"sni": _norm(Xte[:, slice(*_b["EXT"])]),
+             "atlaslr": _norm(Xte[:, slice(*_b["ATL"])]),
+             "atlaset": _norm(Xte[:, slice(*_b["ATL_ET"])])}
     for nm, path in [("atlasnn", "atlas_nn_block.npz"),
                      ("atlasnn3", "atlas_nn3_block.npz"),
                      ("atlasnn4", "atlas_nn4_block.npz"),
@@ -165,8 +166,9 @@ def main(names=None):
             out = M.fit_extra_trees(Xa, pd.Series(y), list(classes), Xb,
                                     seeds=tuple(range(10)))
         elif name == "etnog":
-            out = M.fit_extra_trees(Xtr[:, E2.CTX_SLICE], pd.Series(y), list(classes),
-                                    Xte[:, E2.CTX_SLICE], seeds=tuple(range(10)))
+            sl = E2.ctx_slice()
+            out = M.fit_extra_trees(Xtr[:, sl], pd.Series(y), list(classes),
+                                    Xte[:, sl], seeds=tuple(range(10)))
         elif name == "etgene":
             out = M.fit_extra_trees(Xtr[:, E2.GENE_SLICE], pd.Series(y), list(classes),
                                     Xte[:, E2.GENE_SLICE], seeds=tuple(range(10)))

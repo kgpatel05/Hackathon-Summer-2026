@@ -187,6 +187,31 @@ def load_or_build(meta_all: pd.DataFrame, classes: list[str]) -> tuple[np.ndarra
     return real, null
 
 
+def block_offsets() -> dict[str, tuple[int, int]]:
+    """Column ranges of the adopted stack, derived from the caches rather than assumed.
+
+    The BASE block widens whenever the metadata one-hot encoder sees new Mouse_ID or
+    Section_ID levels, which happens as soon as the validation cohort replaces the test
+    cohort.  Every consumer that slices the stack must therefore compute its offsets
+    instead of hard-coding the released-cohort layout, or it will silently read the wrong
+    columns.
+    """
+    base = np.load(BASE_CACHE, allow_pickle=True)
+    widths = [("BASE", base["BASE_TR"].shape[1]), ("EXT", base["EXT_TR"].shape[1]),
+              ("SPA", base["SPA_TR"].shape[1]), ("NIC", base["NIC_TR"].shape[1]),
+              ("COMP", np.load(COMP_CACHE, allow_pickle=True)["k10"].shape[1]),
+              ("ANIC", np.load(NICHE_CACHE, allow_pickle=True)["k50"].shape[1]),
+              ("ATL", base["ATL_TR"].shape[1])]
+    et = np.load(ATLAS_ET_CACHE, allow_pickle=True)
+    widths += [("ATL_ET", et["ATL_ET_TR"].shape[1]), ("COARSE", et["COARSE_TR"].shape[1])]
+    out, start = {}, 0
+    for name, w in widths:
+        out[name] = (start, start + w)
+        start += w
+    out["TOTAL"] = (0, start)
+    return out
+
+
 def load_incumbent() -> tuple[np.ndarray, np.ndarray]:
     """Load the exact adopted 694 columns; do not silently reconstruct variants.
 
@@ -215,8 +240,11 @@ def load_incumbent() -> tuple[np.ndarray, np.ndarray]:
         comp[n_tr:], niche[n_tr:], base["ATL_TE"],
         atlas_et["ATL_ET_TE"], atlas_et["COARSE_TE"],
     ]).astype(np.float32)
-    if train.shape[1] != 694 or test.shape[1] != 694:
-        raise ValueError(f"unexpected incumbent widths: {train.shape}, {test.shape}")
+    # The width is 694 for the released cohort, but the metadata one-hot encoder widens
+    # when the validation cohort introduces new Mouse_ID / Section_ID levels.  Only the
+    # train/test agreement is structural.
+    if train.shape[1] != test.shape[1]:
+        raise ValueError(f"incumbent train/test widths differ: {train.shape}, {test.shape}")
     return train, test
 
 
