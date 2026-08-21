@@ -111,6 +111,17 @@ move, which is the expected signature of an ensemble that is already averaged en
 
 The adopted artifact is SHA-256 `55d9dfb5ad13b5d2941dd142e011b330bf3f6bfe06e274adededc4536fa21f20`.
 
+## Methods that work standalone but add nothing
+
+A late round added seven further experts, several of them substantial results on their own:
+a reference network regularised for prediction consistency on the unlabelled challenge
+cells reaches **0.8106** without reading a single challenge label - better than the
+694-feature ExtraTrees that was this project's production model for twelve iterations - and
+retrieval against the atlas in that network's learned embedding reaches 0.7952, against
+0.4362 for the same idea in raw gene space. Neither moves the pool: six compositions land
+within 0.03 point of one another, and scored candidates at 37, 40 and 44 experts span
+twelve cells. The combination is closed, not merely at diminishing returns.
+
 ## Why the plateau exists
 
 Using the withheld genes purely as a measuring instrument - quarantined modules that
