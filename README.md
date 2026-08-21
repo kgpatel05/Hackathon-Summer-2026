@@ -139,6 +139,21 @@ already spanned by the other forty members. Scaling the method - mean teacher wi
 target, sixteen-seed deep ensemble - reaches 0.8092, still a point behind the pool's honest
 0.822 on the same cells.
 
+## Above the released-panel ceiling on every dominant confusion
+
+The sharpest test of whether anything is left: for each dominant confusion, measure on
+non-challenge atlas cells how well it separates using the released 200 genes alone, as an
+*in-sample* binary discriminant - a generous bound. Our pool beats that bound on all six,
+by 1.43 points in aggregate, over pairs holding 390 of our 940 errors (astrocyte_1 vs
+astrocyte_2: 0.949 against a 0.896 ceiling; oligodendrocyte_1 vs oligodendrocyte_progenitor_2:
+0.820 against 0.798). Combining metadata, tissue context and forty routes through the
+reference already extracts more than the released genes support pairwise.
+
+The remaining out-of-fold-to-test gap is draw noise: honest cell-disjoint out-of-fold
+accuracy is 0.8214 against 0.8120 on test, and re-weighting per-class recalls by the test
+class mix gives 0.8213 - the composition explains 0.01 point of it. Two independent
+5,000-cell samples differ with a standard error near 0.8 point.
+
 ## Why the plateau exists
 
 Using the withheld genes purely as a measuring instrument - quarantined modules that
