@@ -29,10 +29,10 @@ Scores will be posted shortly after 3pm EDT each day here [Leaderboard.Hackathon
 
 # Fork modelling status (21 August 2026, Iteration 20)
 
-`prediction/prediction.csv` holds a **calibration-aware log-linear pool of 37 experts**
+`prediction/prediction.csv` holds a **calibration-aware log-linear pool of 40 experts**
 (`notebooks/lib/iteration18_submit.py`). Frozen test accuracy moved from **0.7900 to
-0.8104** (Cohen's kappa 0.7771 to 0.7984, balanced accuracy 0.7595 to 0.7955, neurons
-0.9029 to 0.9210, glia 0.7252 to 0.7469). Provenance is unchanged: the released 200 genes
+0.8120** (Cohen's kappa 0.7771 to 0.8001, balanced accuracy 0.7595 to 0.7986, neurons
+0.9029 to 0.9227, glia 0.7252 to 0.7485). Provenance is unchanged: the released 200 genes
 and metadata, public non-challenge reference cells, and every challenge cell removed from
 the reference donor pool. No withheld gene is used anywhere.
 
@@ -82,7 +82,7 @@ and a 36-model ensemble. The honest ceiling on the released panel is about **0.8
 Pool parameters are validated **cell-disjointly**: five folds over the training cells, the
 exponents fitted on four fifths and scored on the fifth that contributed nothing to the
 fit, repeated over four fold partitions. Mean gain over the 694-feature ExtraTrees
-**+1.52 points**, worst partition +1.42.
+**+1.77 points**, worst partition +1.70.
 
 An earlier protocol fitted the exponents on fold partitions {18,41} and scored them on
 {59,83}. Those are different fold assignments of the *same* 5,000 cells, so every scored
