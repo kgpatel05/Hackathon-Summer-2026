@@ -102,7 +102,7 @@ def _neighbour_block(xy, sec, xy_ref, sec_ref, code_ref, n_class, drop_self,
     return comp, dist
 
 
-def build(seeds=(0, 1, 2, 3, 4), hidden=(1024, 512), epochs=55, dropout=0.25,
+def build(seeds=tuple(range(10)), hidden=(1024, 512), epochs=55, dropout=0.25,
           multi=False):
     import torch
     data = B.load_all()

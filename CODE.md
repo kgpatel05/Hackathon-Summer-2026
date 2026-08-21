@@ -88,7 +88,7 @@ regenerates.
 ## Reported performance
 
 Cell-disjoint out-of-fold accuracy on the released training cells: **0.8214**.
-Accuracy on the original test set: **0.8126** (Cohen's kappa 0.8008).
+Accuracy on the original test set: **0.8108** (Cohen's kappa 0.7988).
 
 Because prizes are decided on a validation cohort, we also measured generalisation to
 unseen groups rather than unseen cells. Refitting and scoring by held-out group gives

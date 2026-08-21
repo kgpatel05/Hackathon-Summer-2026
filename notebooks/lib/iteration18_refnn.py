@@ -151,11 +151,11 @@ def sni_design():
 
 VARIANTS = {
     "atlasnn2": dict(source="atlas", md=True, hidden=(1024, 512, 256), epochs=60,
-                     dropout=0.3, seeds=(10, 11, 12)),
+                     dropout=0.3, seeds=tuple(range(10, 20))),
     "atlasnn_md": dict(source="atlas", md=False, hidden=(768, 384), epochs=45,
-                       dropout=0.2, seeds=(20, 21, 22)),
+                       dropout=0.2, seeds=tuple(range(20, 30))),
     "sninn": dict(source="sni", md=True, hidden=(768, 384), epochs=45, dropout=0.2,
-                  seeds=(30, 31, 32)),
+                  seeds=tuple(range(30, 40))),
 }
 
 

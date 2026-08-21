@@ -96,7 +96,7 @@ def build(name):
         m = keep & np.array([l in gi for l in al])
         yg = np.array([gi[l] for l in al[m]])
         print(f"gliann: {m.sum()} atlas glia, {len(glia_classes)} classes", flush=True)
-        sub = RN._train_predict(Xa[m], yg, len(glia_classes), Xc, seeds=(0, 1, 2, 3, 4),
+        sub = RN._train_predict(Xa[m], yg, len(glia_classes), Xc, seeds=tuple(range(10)),
                                 hidden=(1024, 512), epochs=55, dropout=0.25)
         probs = np.full((len(Xc), len(classes)), FLOOR, np.float32)
         idx = [list(classes).index(c) for c in glia_classes]

@@ -50,7 +50,7 @@ def _region_to_challenge(v):
     return np.array([m.get(x, "nan") for x in v])
 
 
-def build(epochs=45, seeds=(0, 1, 2), hidden=(768, 384)):
+def build(epochs=45, seeds=tuple(range(10)), hidden=(768, 384)):
     import torch, torch.nn as nn
     data = B.load_all()
     classes = data["classes"]
