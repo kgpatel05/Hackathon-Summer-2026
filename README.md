@@ -93,9 +93,28 @@ overstated a 109-parameter gated variant by +0.32 point that did not exist — t
 
 Negative results with controls: hierarchical coarse re-weighting (0.00 pt), a (cell, class)
 candidate re-ranker (-0.20), a second-stage ranker over all expert votes (-0.29),
-atlas-trained pairwise arbiters (-0.32), a per-class logit offset (+0.03, noise), and
-imputing `Segment` for glia (it is a cluster id, not a spatial subdivision: predictable
-from the label at 0.9975 and from position at 0.1851).
+atlas-trained pairwise arbiters (-0.32), a gated pool with class-frequency and cell-depth
+interactions (0.00), a per-class logit offset (+0.03, noise), and imputing `Segment` for
+glia (it is a cluster id, not a spatial subdivision: predictable from the label at 0.9975
+and from position at 0.1851).
+
+## Why the plateau exists
+
+Using the withheld genes purely as a measuring instrument - quarantined modules that
+nothing in the prediction pipeline can import - the remaining errors split three ways: of
+954, **164** are already solved by a released-panel reference model (real, but three
+independent gating attempts could not identify them), **627** are solved only with the
+withheld panel, and **163** by neither.
+
+The mechanism is a single marker. The largest error bucket in this project, 156 cells
+confusing `oligodendrocyte_1` with `oligodendrocyte_progenitor_2`, is led by **Opalin**,
+the canonical myelinating-oligodendrocyte marker, which is withheld: on non-challenge atlas
+cells the pair separates at 0.989 with the full panel and 0.798 with the released panel,
+and only **13%** of the withheld discriminative direction is reconstructable from all 200
+released genes (best single proxy r = 0.18). `meninges_1` versus `meninges_2` is the same
+(R^2 = 0.18). Where the withheld direction is half-recoverable (R^2 0.47-0.59 for the
+astrocyte, endothelial and oligodendrocyte_2 pairs) a plain linear model on the released
+panel already reaches 0.90-0.92 in-sample against 0.98-0.99 with the full panel.
 
 Start with:
 
