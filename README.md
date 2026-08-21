@@ -122,6 +122,23 @@ retrieval against the atlas in that network's learned embedding reaches 0.7952, 
 within 0.03 point of one another, and scored candidates at 37, 40 and 44 experts span
 twelve cells. The combination is closed, not merely at diminishing returns.
 
+## The combination is closed, not saturating
+
+The strongest single reference model this project has produced is a network regularised for
+prediction consistency and low entropy on the unlabelled challenge cells: **0.8106**
+standalone without reading one challenge label, against 0.8028 for the ExtraTrees that was
+production for twelve iterations. The pool gives it, and every one of its siblings, an
+exponent of **exactly zero**.
+
+That looked like a mis-specification - entropy minimisation makes the posterior near
+one-hot, so a confidently wrong expert costs about 14 nats and an unbounded-below objective
+switches it off whatever its ranking is worth. Flooring every expert identically bounds that
+penalty, and swept cell-disjointly the gain falls monotonically (no floor +1.760, floor 0.02
++1.680, floor 0.10 +1.505). No floor is best, so the zeros are genuine: the information is
+already spanned by the other forty members. Scaling the method - mean teacher with an EMA
+target, sixteen-seed deep ensemble - reaches 0.8092, still a point behind the pool's honest
+0.822 on the same cells.
+
 ## Why the plateau exists
 
 Using the withheld genes purely as a measuring instrument - quarantined modules that
