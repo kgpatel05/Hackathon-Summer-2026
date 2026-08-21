@@ -98,6 +98,19 @@ interactions (0.00), a per-class logit offset (+0.03, noise), and imputing `Segm
 glia (it is a cluster id, not a spatial subdivision: predictable from the label at 0.9975
 and from position at 0.1851).
 
+## The combiner is saturated
+
+Four composition variants of the final pool - adding a nearest-class-mean reference view, a
+boosted model on the augmented stack, an alternate-geometry ExtraTrees, and all of those
+together with a re-seeded fine-tuned expert - land within 0.02 point of one another under
+cell-disjoint validation, and none beats the adopted 40-expert set (+1.770 mean, +1.700
+worst). Seed averaging was raised on every reference block that carries pool weight
+(linear 10 to 24, network 5 to 12, ExtraTrees 2 to 10, and the strongest challenge-side
+expert 5 to 10 out-of-fold and 10 to 20 for the test fit); the standalone accuracies barely
+move, which is the expected signature of an ensemble that is already averaged enough.
+
+The adopted artifact is SHA-256 `55d9dfb5ad13b5d2941dd142e011b330bf3f6bfe06e274adededc4536fa21f20`.
+
 ## Why the plateau exists
 
 Using the withheld genes purely as a measuring instrument - quarantined modules that
