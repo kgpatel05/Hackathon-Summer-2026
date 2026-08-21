@@ -108,8 +108,16 @@ def run(seed=18, folds=5, names=tuple(EXPERTS)):
     cache = B.OUT / f"experts_oof_seed{seed}.npz"
     store = dict(np.load(cache, allow_pickle=True)) if cache.exists() else {}
     allow = np.ones((len(y), len(classes)), bool)
-    skf = StratifiedKFold(folds, shuffle=True, random_state=seed)
-    splits = list(skf.split(X, y))
+    # `seed="mouse"` swaps random cell folds for leave-one-mouse-out, so an expert's
+    # out-of-fold probability is produced by a model that never saw that animal - the
+    # condition the validation cohort will actually present.
+    if str(seed) == "mouse":
+        from sklearn.model_selection import GroupKFold
+        g = data["meta_train"]["Mouse_ID"].astype(str).to_numpy()
+        splits = list(GroupKFold(n_splits=5).split(X, y, g))
+    else:
+        splits = list(StratifiedKFold(folds, shuffle=True,
+                                      random_state=int(seed)).split(X, y))
     for fit, val in splits:
         allow[val] = B.compat_mask(data["meta_train"].iloc[fit], y[fit],
                                    data["meta_train"].iloc[val], classes)
@@ -137,5 +145,6 @@ def run(seed=18, folds=5, names=tuple(EXPERTS)):
 
 
 if __name__ == "__main__":
-    s = int(sys.argv[1]) if len(sys.argv) > 1 else 18
+    a = sys.argv[1] if len(sys.argv) > 1 else "18"
+    s = a if a == "mouse" else int(a)
     run(seed=s, names=tuple(sys.argv[2].split(",")) if len(sys.argv) > 2 else tuple(EXPERTS))

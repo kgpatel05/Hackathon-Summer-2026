@@ -247,7 +247,16 @@ def run(seed=18, folds=5, names=("etnog", "etgene", "nb", "knnp")):
     cache = B.OUT / f"experts_oof_seed{seed}.npz"
     store = dict(np.load(cache, allow_pickle=True))
     allow = store["allow"]
-    splits = list(StratifiedKFold(folds, shuffle=True, random_state=seed).split(X, y))
+    # `seed="mouse"` swaps random cell folds for leave-one-mouse-out, so an expert's
+    # out-of-fold probability is produced by a model that never saw that animal - the
+    # condition the validation cohort will actually present.
+    if str(seed) == "mouse":
+        from sklearn.model_selection import GroupKFold
+        g = data["meta_train"]["Mouse_ID"].astype(str).to_numpy()
+        splits = list(GroupKFold(n_splits=5).split(X, y, g))
+    else:
+        splits = list(StratifiedKFold(folds, shuffle=True,
+                                      random_state=int(seed)).split(X, y))
 
     fixed = _fixed_experts(data, len(y))
     ft = B.OUT / f"atlasft_oof_seed{seed}.npz"
@@ -390,7 +399,8 @@ def run(seed=18, folds=5, names=("etnog", "etgene", "nb", "knnp")):
 
 
 if __name__ == "__main__":
-    s = int(sys.argv[1]) if len(sys.argv) > 1 else 18
+    a = sys.argv[1] if len(sys.argv) > 1 else "18"
+    s = a if a == "mouse" else int(a)
     nm = tuple(sys.argv[2].split(",")) if len(sys.argv) > 2 else (
         "etnog", "etgene", "nb", "knnp", "meta", "sni", "atlaslr", "atlaset")
     run(seed=s, names=nm)

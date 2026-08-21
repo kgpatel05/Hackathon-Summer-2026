@@ -155,8 +155,13 @@ def run(seed=18, folds=5, use_laminae=False, tag="atlasft"):
             print(f"  pretrain seed {s} ({time.time()-t0:.0f}s)", flush=True)
         torch.save(states, pre_path)
 
-    splits = list(StratifiedKFold(folds, shuffle=True,
-                                  random_state=seed).split(Xc[:n_tr], y))
+    if str(seed) == "mouse":
+        from sklearn.model_selection import GroupKFold
+        g = data["meta_train"]["Mouse_ID"].astype(str).to_numpy()
+        splits = list(GroupKFold(n_splits=5).split(Xc[:n_tr], y, g))
+    else:
+        splits = list(StratifiedKFold(folds, shuffle=True,
+                                      random_state=int(seed)).split(Xc[:n_tr], y))
     out = np.zeros((n_tr, len(classes)), np.float32)
     for k, (fit, val) in enumerate(splits):
         t0 = time.time()
@@ -175,7 +180,9 @@ def run(seed=18, folds=5, use_laminae=False, tag="atlasft"):
         out[val] = acc / len(SEEDS)
         print(f"  fold {k+1}/{folds} ({time.time()-t0:.0f}s)", flush=True)
     np.savez_compressed(cache, probs=out, classes=classes)
-    allow = np.load(B.OUT / f"experts_oof_seed{seed}.npz")["allow"]
+    store = B.OUT / f"experts_oof_seed{seed}.npz"
+    allow = (np.load(store)["allow"] if store.exists()
+             else np.ones((n_tr, len(classes)), bool))
     print(f"{tag} partition {seed}: OOF "
           f"{np.mean(classes[np.where(allow, out, -1).argmax(1)] == y):.4f}")
 
@@ -221,5 +228,5 @@ if __name__ == "__main__":
     if args and args[0] == "test":
         test_block(lam, tag)
     else:
-        for s in [int(x) for x in (args or [18])]:
-            run(seed=s, use_laminae=lam, tag=tag)
+        for s in (args or ["18"]):
+            run(seed=(s if s == "mouse" else int(s)), use_laminae=lam, tag=tag)
