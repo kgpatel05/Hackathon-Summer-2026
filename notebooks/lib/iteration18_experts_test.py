@@ -88,13 +88,11 @@ def main(names=None):
     knn_tr = cf["knn"][:n_tr, :, 2]
     fixed["knnp"] = softmax(-knn / max(knn_tr.std(), 1e-6) * 1.5, axis=1).astype(np.float32)
 
-    todo = names or ["et", "xgb", "logit", "mlp", "rf", "etnog", "etgene", "etnn",
-                     "nb", "knnp", "meta", "sni", "atlaslr", "atlaset", "atlasnn",
-                     "atlasnn2", "atlasnn3", "atlasnn4", "atlasnn5",
-                     "atlasnn_md", "sninn", "atlasft", "rank", "etaug", "xgbaug",
-                     "atlaslin", "atlaslin_g", "gliann", "meta2", "etaug3",
-                     "atlaslam_lin", "atlaslam_nn", "atlaslam_et", "atlasftlam",
-                     "etaug4_0.08", "etaug4_0.25_3", "xgbaug4"]
+    # Build exactly the experts the deployed model uses, taken from the model itself.
+    # A hard-coded list drifts: it previously contained `rank`, which has no builder and
+    # is not in the adopted set, so a fresh run died here after 26 successful stages.
+    import iteration18_submit as SUB
+    todo = names or list(SUB.ADOPTED)
     for name in todo:
         if name in store:
             print(f"  {name}: cached"); continue
