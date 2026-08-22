@@ -39,8 +39,10 @@ DERIVED_GLOBS = ["outputs/iteration28/*.npz", "outputs/iteration28/predictions/*
 PARTITIONS = ("18", "41", "59", "83")
 
 
-REQUIRED_META = ["Datasets", "Region", "Excitatory_vs_Inhibitory", "Segment",
-                 "Gender", "Mouse_ID", "AP_position", "Section_ID"]
+# Only what the model actually reads: the five encoded columns, Section_ID for spatial
+# grouping, and the three QC columns.  Cohort identifiers are not required.
+REQUIRED_META = ["Region", "Excitatory_vs_Inhibitory", "Segment", "Gender",
+                 "AP_position", "Section_ID", "center_x", "center_y", "volume"]
 
 
 def preflight():

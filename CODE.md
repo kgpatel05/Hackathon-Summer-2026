@@ -61,11 +61,11 @@ panel reads systematically high or low, which is what the bias absorbs. It is wo
 +0.0016 cell-disjoint and +0.0010 leave-one-mouse-out — small, but every penalty in
 0.03–0.3 is at least as good as none on both protocols, so it is not a lucky point.
 
-Feature stack (409 columns), all of it released data:
+Feature stack (285 columns), all of it released data:
 
 | block | cols | source |
 |---|---:|---|
-| `BASE` | 371 | the 200 released genes, 9 QC columns, metadata one-hot |
+| `BASE` | 247 | the 200 released genes, 9 QC columns, metadata one-hot |
 | `SPA` | 8 | registered spatial coordinates |
 | `NIC` | 30 | niche expression over the challenge cells' own released counts |
 
@@ -73,6 +73,18 @@ Experts: ExtraTrees in five geometries (full stack, genes only, context only, wi
 multi-fold variants), RandomForest, XGBoost, logistic regression and two neural models on
 that stack, a count-native multinomial fitted on the released training counts, and a
 hierarchical metadata prior.
+
+### Why no cohort identifiers
+
+`Datasets`, `Mouse_ID` and `Section_ID` name this cohort rather than describing a cell.
+One-hot encoded they were 124 of 409 columns, and on a validation cohort from new tissue
+every one is zero, so the model would lose a third of its stack exactly when it is scored.
+Removing them is better on both honest protocols (+0.0034 cell-disjoint, +0.0028
+leave-one-mouse-out) and costs 0.0046 on the released test set, whose cells share all 108
+sections and all 10 mice with training and can therefore be identified by name. The two
+protocols that hold out data disagree with the one that does not; the model follows the
+two. `Section_ID` is still read for spatial registration and niche grouping, where only
+the grouping matters and the label is never encoded.
 
 ### What was deliberately left out
 
@@ -102,9 +114,9 @@ information and was not used to select anything.
 
 | protocol | accuracy |
 |---|---:|
-| cell-disjoint CV (hold out random cells) | **0.7752** |
-| hold out a whole **mouse** | **0.7750** |
-| released test set | 0.7844 |
+| cell-disjoint CV (hold out random cells) | **0.7786** |
+| hold out a whole **mouse** | **0.7778** |
+| released test set | 0.7798 |
 
 Holding out an entire animal is no worse than holding out random cells, so the model is not
 cohort-specific and should carry to a validation cohort from new tissue. That property is
@@ -128,6 +140,12 @@ VERIFIED prediction/prediction.csv: 3137 rows, 59 distinct labels, order matches
 
 It completed in 28 minutes and scored **0.7845** on that cohort, against 0.7844 on the full
 5,000 — so the pipeline is insensitive to cohort size, not merely tolerant of it.
+
+A second rehearsal replaced every `Section_ID`, `Mouse_ID` and `Datasets` value with one
+never seen in training — the "new tissue" case — on a 4,211-cell cohort. That run is what
+removed the cohort identifiers from the model: the earlier version, which one-hot encoded
+them, fell from 0.7844 to 0.7758 there, because 124 of its 409 columns silently went to
+zero. The shipped model reads no identifier, so novel ones cost it nothing.
 
 Two further properties were checked rather than assumed:
 

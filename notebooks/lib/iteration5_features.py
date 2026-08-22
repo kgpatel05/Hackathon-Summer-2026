@@ -17,9 +17,15 @@ from sklearn.neighbors import NearestNeighbors
 DATA_DIR = Path("data")
 
 TARGET = "MERFISH_cell_type_annotation"
+# Datasets, Mouse_ID and Section_ID name *this* cohort rather than describing a cell, and
+# they are deliberately absent.  One-hot encoded they were 124 of 409 columns, and on a
+# validation cohort from new tissue every one of them is zero - the encoder has never seen
+# the values - so the model would lose a third of its stack exactly when it is being
+# scored.  Dropping them is better on both honest protocols anyway.  Section_ID is still
+# read directly for spatial registration and niche grouping, where only the grouping
+# matters and the label itself is never encoded.
 CATEGORICAL_META = [
-    "Datasets", "Region", "Excitatory_vs_Inhibitory", "Segment",
-    "Gender", "Mouse_ID", "AP_position", "Section_ID",
+    "Region", "Excitatory_vs_Inhibitory", "Segment", "Gender", "AP_position",
 ]
 
 
