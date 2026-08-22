@@ -35,38 +35,29 @@ Winning teams will be confirmed and announced by Monday 8/24.
   
 If your predictions on the original test dataset beat random guessing, each team member will win a prize. Cash prizes will be determined based on performance on a new dataset.
 
-# Fork modelling status (22 August 2026, Iteration 27)
+# Fork modelling status (22 August 2026)
 
-`prediction/prediction.csv` holds a **calibration-aware log-linear pool of 42 experts,
-routed per cell by the evidence available for it** (`python3 run_prediction.py`).
-Test accuracy **0.9518**, Cohen's kappa 0.9488, balanced accuracy 0.9589
-(neurons 0.9797, glia 0.9358).
+`prediction/prediction.csv` holds a **calibration-aware log-linear pool of 26 experts**
+built without the source dataset (`python3 run_prediction.py`).
 
-Following the organisers' 22 August authorisation to use any online resource, the model
-adds two reference models over the **full published 500-gene panel**; the challenge
-released 200 of the study's 500 genes and the rest are public for the same cells.
+Per the 22 August clarification that training on the source data is not in the spirit of
+the event, everything derived from `MERFISH_spinal_cord_0531.h5ad` was removed - the atlas
+transfers, the neighbourhood-composition features, the Laminae/Segment correspondence, the
+fine-tuned reference networks and the full 500-gene panel. That cost 0.9518 to 0.7864 on
+the released test set. Removal is enforced rather than promised: no shipped module can open
+that file, and `no_source_data.py` blocks it at runtime.
 
-**Routing, so the model survives the validation cohort.** Each scored cell is looked up by
-ID in the public files. Cells with a full-panel record go to the 42-expert pool; cells
-without go to the 40 released-panel experts under a *separately fitted* weight set - fitted
-with the full panel present, those forty are crowded almost to zero, so their weights would
-not be usable when it is silent. Forcing coverage to zero reproduces the released-panel
-artifact byte for byte.
+What remains is the released 200 genes and metadata, the challenge cells' own spatial
+neighbourhoods, and `SNI_merged_0531.h5ad` - a different experiment on different animals,
+used far harder than before. SNI carries five independent annotations (voting, RCTD,
+Seurat, SingleR, Tangram); transfers trained on each make different mistakes, and pooling
+them was worth +0.32 point.
 
-**Validated on training data, not on the test set.**
+| protocol (training cells only) | accuracy |
+|---|---:|
+| cell-disjoint cross-validation | **0.7942** |
+| hold out a whole mouse | **0.7938** |
+| test set | 0.7864 |
 
-| protocol (training cells only) | released panel | full panel |
-|---|---:|---:|
-| cell-disjoint CV gain over the ExtraTrees baseline | +1.77 pt | **+14.63 pt** |
-| hold out a whole mouse | 82.22% | **95.18%** |
-| hold out a whole imaging run | 82.20% | **95.24%** |
-| external cohort, different mice and a different annotator | 0.4316 | **0.6384** |
-
-Held-out-*mouse* cross-validation predicted 95.18% and the test set returned 95.18%. The
-external-cohort row is the honest stress test: the atlas annotation was produced by
-clustering the 500-gene data, so a full-panel model partly relearns that clustering. On
-SNI cells - different animals, sections absent from the atlas, labels from a four-method
-consensus rather than the atlas clustering - both panels drop, but the full panel is still
-worth +20.7 points.
-
-See `CODE.md` for exactly what the model uses and does not.
+Holding out an entire animal is no worse than holding out random cells, so the model is not
+cohort-specific. See `CODE.md` for exactly what it uses and does not.
