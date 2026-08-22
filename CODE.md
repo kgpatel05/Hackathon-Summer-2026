@@ -113,6 +113,33 @@ the reason for the omission described above.
 For reference, the version that used SNI scored 0.7854 cell-disjoint CV and 0.7872 on the
 test set; excluding it cost 1.2 points of cross-validated accuracy.
 
+## Verification
+
+The submission was not merely produced; the shipped code was rehearsed under Sunday's
+conditions. A fresh `git clone` of this repository — 14 files, no `data/external`, no
+caches — had its test cohort replaced by a **3,137-cell** subsample, to check that nothing
+assumes the released cohort's size, and was run with the documented command:
+
+```
+[preflight] 3137 cells, 200 genes, metadata complete
+[1/7] ... [7/7] fit the pool and write the submission
+VERIFIED prediction/prediction.csv: 3137 rows, 59 distinct labels, order matches meta_test.csv
+```
+
+It completed in 28 minutes and scored **0.7845** on that cohort, against 0.7844 on the full
+5,000 — so the pipeline is insensitive to cohort size, not merely tolerant of it.
+
+Two further properties were checked rather than assumed:
+
+* **the metadata mask degrades safely.** It is a hard constraint, so a validation cohort
+  carrying metadata values absent from training could in principle mask every class off a
+  cell. It cannot: unseen values are ignored, and a row that would be left with nothing is
+  reset to all-allowed. Forcing every mask column to an unseen value leaves all 60 classes
+  available and no cell blocked.
+* **the caches cannot go stale.** The input data is fingerprinted; if it changes, every
+  derived artifact is discarded before rebuilding, so a validation run cannot silently
+  serve predictions built from the previous cohort.
+
 ## Runtime
 
 About one hour end to end on an Apple M3 (the neural experts use the GPU via MPS).
