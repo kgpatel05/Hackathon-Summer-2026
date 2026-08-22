@@ -55,6 +55,11 @@ PARTITIONS = (18, 41, 59, 83)
 ALPHA = 0.45
 EPS = 1e-9
 POOL_RIDGE = 1e-3
+# Per-class bias on the pooled score.  The exponents correct how sharp each expert is;
+# they cannot correct a class the whole panel reads systematically high or low, which is
+# what this absorbs.  Every setting in 0.03-0.3 is at least as good as none on both
+# cell-disjoint CV and leave-one-mouse-out; 0.1 is the interior best.
+POOL_BIAS_L2 = 0.1
 SUBMISSION_COLUMN = "MERFISH_cell_type_annotation.y"
 MASK_COLS = ["Region", "Excitatory_vs_Inhibitory", "Segment"]
 
@@ -427,8 +432,9 @@ def submit(tag="clean"):
     gl = np.tile(glia, len(parts))
     fits = {}
     for name, rows in (("glia", np.flatnonzero(gl)), ("neuron", np.flatnonzero(~gl))):
-        fits[name] = pool_fit(logs, yy, classes, lp, allow, rows=rows, l2=POOL_RIDGE)
-        w, a = fits[name]
+        fits[name] = pool_fit(logs, yy, classes, lp, allow, rows=rows, l2=POOL_RIDGE,
+                              bias_l2=POOL_BIAS_L2)
+        w, a = fits[name][0], fits[name][1]
         top = sorted(zip(used, w), key=lambda t: -t[1])[:7]
         print(f"[{name}] a={a:.3f}  " + "  ".join(f"{n}={v:.3f}" for n, v in top
                                                   if v > 5e-3))
@@ -437,8 +443,9 @@ def submit(tag="clean"):
     assert tused == used, (tused, used)
     glia_te = meta_test["Region"].isna().to_numpy()
     z = np.zeros((len(tallow), len(classes)))
-    z[glia_te] = pool_apply(tl[:, glia_te], *fits["glia"], lp, tallow[glia_te])
-    z[~glia_te] = pool_apply(tl[:, ~glia_te], *fits["neuron"], lp, tallow[~glia_te])
+    for sel, name in ((glia_te, "glia"), (~glia_te, "neuron")):
+        w, a, bias = fits[name]
+        z[sel] = pool_apply(tl[:, sel], w, a, lp, tallow[sel], bias=bias)
     pred = classes[z.argmax(1)]
 
     sub = pd.DataFrame({"Cell_ID": meta_test.index.astype(str),
@@ -454,7 +461,7 @@ def submit(tag="clean"):
         "candidate": tag, "file": str(path),
         "sha256": hashlib.sha256(text.encode()).hexdigest(),
         "experts": list(used), "fit_partitions": list(PARTITIONS),
-        "ridge": POOL_RIDGE, "source_atlas_used": False,
+        "ridge": POOL_RIDGE, "bias_l2": POOL_BIAS_L2, "source_atlas_used": False,
     }, indent=2))
     print(f"\nwrote {path}\n  sha256 {hashlib.sha256(text.encode()).hexdigest()}")
     print(f"  distinct labels {sub.iloc[:, 1].nunique()}/{len(classes)}")

@@ -52,8 +52,14 @@ p(class | cell)  ∝  Π_m  p_m(class | cell)^{w_m}  ·  prior(class)^{−a}
 
 with `w` and `a` fitted by maximising out-of-fold multinomial likelihood on the 5,000
 released training cells, separately for the glia and neuron branches, pooled over four fold
-partitions. A hard metadata-compatibility mask removes (cell, class) pairs whose
+partitions, with a lightly regularised per-class bias on the pooled score. A hard
+metadata-compatibility mask removes (cell, class) pairs whose
 `Region`/`Excitatory_vs_Inhibitory`/`Segment` combination never occurs in training.
+
+The exponents correct how *sharp* each expert is; they cannot correct a class the whole
+panel reads systematically high or low, which is what the bias absorbs. It is worth
++0.0016 cell-disjoint and +0.0010 leave-one-mouse-out — small, but every penalty in
+0.03–0.3 is at least as good as none on both protocols, so it is not a lucky point.
 
 Feature stack (409 columns), all of it released data:
 
@@ -96,9 +102,9 @@ information and was not used to select anything.
 
 | protocol | accuracy |
 |---|---:|
-| cell-disjoint CV (hold out random cells) | **0.7736** |
-| hold out a whole **mouse** | **0.7740** |
-| released test set | 0.7838 |
+| cell-disjoint CV (hold out random cells) | **0.7752** |
+| hold out a whole **mouse** | **0.7750** |
+| released test set | 0.7844 |
 
 Holding out an entire animal is no worse than holding out random cells, so the model is not
 cohort-specific and should carry to a validation cohort from new tissue. That property is

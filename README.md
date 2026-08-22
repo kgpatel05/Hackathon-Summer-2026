@@ -55,15 +55,15 @@ the atlas would have been a distinction without a difference. Removal is enforce
 than promised: nothing shipped here opens an `.h5ad`, and `no_source_data.py` blocks the
 source file at runtime.
 
-Together those two removals cost 0.9518 to 0.7838 on the released test set. What remains
+Together those two removals cost 0.9518 to 0.7844 on the released test set. What remains
 is the released 200 genes and metadata plus the challenge cells' own spatial
 neighbourhoods - and the repository is now self-contained, with no external downloads.
 
 | protocol (training cells only) | accuracy |
 |---|---:|
-| cell-disjoint cross-validation | **0.7736** |
-| hold out a whole mouse | **0.7740** |
-| released test set | 0.7838 |
+| cell-disjoint cross-validation | **0.7752** |
+| hold out a whole mouse | **0.7750** |
+| released test set | 0.7844 |
 
 Holding out an entire animal is no worse than holding out random cells, so the model is not
 cohort-specific. See `CODE.md` for exactly what it uses and does not.
