@@ -128,6 +128,15 @@ test set; excluding it cost 1.2 points of cross-validated accuracy.
 
 ## Verification
 
+**The committed prediction is reproducible byte for byte.** A clean `git clone`, with
+`prediction/prediction.csv` deleted and nothing else touched, rebuilt it exactly:
+
+```
+committed: c17f5fe7081fc6f534ae0e88b5747594a4bb272051cdb0e15cd119fca9b99c45
+rebuilt:   c17f5fe7081fc6f534ae0e88b5747594a4bb272051cdb0e15cd119fca9b99c45   (26m49s)
+```
+
+
 The submission was not merely produced; the shipped code was rehearsed under Sunday's
 conditions. A fresh `git clone` of this repository — 14 files, no `data/external`, no
 caches — had its test cohort replaced by a **3,137-cell** subsample, to check that nothing
