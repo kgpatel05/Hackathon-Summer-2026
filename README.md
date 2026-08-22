@@ -43,7 +43,7 @@ built without the source dataset (`python3 run_prediction.py`).
 Per the 22 August clarification that training on the source data is not in the spirit of
 the event, everything derived from `MERFISH_spinal_cord_0531.h5ad` was removed - the atlas
 transfers, the neighbourhood-composition features, the Laminae/Segment correspondence, the
-fine-tuned reference networks and the full 500-gene panel. That cost 0.9518 to 0.7864 on
+fine-tuned reference networks and the full 500-gene panel. That cost 0.9518 to 0.7872 on
 the released test set. Removal is enforced rather than promised: no shipped module can open
 that file, and `no_source_data.py` blocks it at runtime.
 
@@ -57,7 +57,7 @@ them was worth +0.32 point.
 |---|---:|
 | cell-disjoint cross-validation | **0.7942** |
 | hold out a whole mouse | **0.7938** |
-| test set | 0.7864 |
+| test set | 0.7872 |
 
 Holding out an entire animal is no worse than holding out random cells, so the model is not
 cohort-specific. See `CODE.md` for exactly what it uses and does not.

@@ -84,7 +84,7 @@ All figures are cross-validated on the released **training** cells except the la
 |---|---:|
 | cell-disjoint CV (hold out random cells) | **0.7942** |
 | hold out a whole **mouse** | **0.7938** |
-| test set | 0.7864 |
+| test set | 0.7872 |
 
 Holding out an entire animal is no worse than holding out random cells, so the model is not
 cohort-specific and should carry to a validation cohort from new tissue.

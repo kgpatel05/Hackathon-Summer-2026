@@ -321,6 +321,16 @@ def experts(seed):
               f"({time.time()-t0:.0f}s)", flush=True)
         np.savez_compressed(store, **d)
 
+    # The outside-data expert bank is a fixed block: identical for every fold, so it is
+    # merged in here rather than refitted.  This was previously done by hand, which meant
+    # the pipeline produced a 16-expert pool while the measured model had 26.
+    sni_bank = OUT / "sni_experts.npz"
+    if sni_bank.exists():
+        bank = np.load(sni_bank, allow_pickle=True)
+        for k in sorted(bank.files):
+            d[k] = (bank[k][len(y):] if is_test else bank[k][:len(y)]).astype(np.float32)
+        print(f"  merged {len(bank.files)} outside-data experts", flush=True)
+
     n_out = len(X_te) if is_test else len(y)
     XE = (lambda val: X_te) if is_test else (lambda val: X_tr[val])
     CE = (lambda val: cte) if is_test else (lambda val: ctr[val])
