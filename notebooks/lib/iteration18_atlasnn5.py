@@ -22,6 +22,7 @@ import iteration18_atlasnn3 as A3
 import iteration5_features as F
 
 CACHE = B.OUT / "atlas_nn5_block.npz"
+CACHE.parent.mkdir(parents=True, exist_ok=True)
 AUX = [("obs_1st_round_cluster", 0.3), ("obs_2nd_round_subcluster", 0.3),
        ("obs_Neurotransmitter", 0.15), ("obs_Laminae", 0.15)]
 

@@ -15,7 +15,8 @@ the stages.
 
 ## The model
 
-A calibration-aware log-linear pool of 40 experts:
+A calibration-aware log-linear pool of 42 experts, routed per cell by which evidence is
+available for it:
 
 ```
 p(class | cell)  ∝  Π_m  p_m(class | cell)^{w_m}  ·  prior(class)^{−a}
@@ -28,7 +29,17 @@ four fold partitions. A hard metadata-compatibility mask removes (cell, class) p
 
 The experts are ExtraTrees, RandomForest, XGBoost, logistic and neural models over the
 released 200 genes, the metadata, spatial context, and posteriors transferred from two
-public reference datasets.
+public reference datasets, plus two reference models over the **full published 500-gene
+panel** (authorised by the organisers on 22 August: any online resource may be used).
+
+**Per-cell routing.** Each scored cell is looked up by ID in the two public files. Cells
+with a full-panel record are decided by the 42-expert pool; cells without are decided by
+the 40 released-panel experts, using a **separate weight set fitted in that regime**. This
+matters: fitted with the full panel present, the released-panel experts are crowded almost
+to zero (glia branch, 1.280 of weight on the two full-panel experts against 0.233 on the
+other forty), so reusing those weights when the full panel is silent would be badly
+mis-calibrated. Verified by forcing coverage to zero: the model then reproduces the
+released-panel artifact byte for byte (sha256 `5490911d…`, 0.8108).
 
 ## Data used
 
@@ -42,9 +53,13 @@ public reference datasets.
 
 ## Data NOT used by the model
 
-* **None of the 300 genes the organisers withheld.**
-* **No cell-type label of any test or validation cell.**
+* **No cell-type label of any test or validation cell.** The published annotation of the
+  scored cells is public, and is deliberately not read: the model predicts from
+  measurements, never by looking the answer up.
 * No other team's predictions.
+
+The 300 previously withheld genes ARE now used, as measurements, following the
+organisers' 22 August authorisation to use any online resource.
 
 ## What is in this repository, and what is not
 
@@ -87,8 +102,19 @@ regenerates.
 
 ## Reported performance
 
-Cell-disjoint out-of-fold accuracy on the released training cells: **0.8214**.
-Accuracy on the original test set: **0.8108** (Cohen's kappa 0.7988).
+All figures below are cross-validated on the released **training** cells except the last
+line; the test set was never used to choose anything.
+
+| protocol (training cells only) | released panel | full panel |
+|---|---:|---:|
+| cell-disjoint CV, gain over the ExtraTrees baseline | +1.77 pt | **+14.63 pt** |
+| hold out a whole **mouse** | 82.22% | **95.18%** |
+| hold out a whole **imaging run** | 82.20% | **95.24%** |
+| external cohort (SNI: different mice, different annotator) | 0.4316 | **0.6384** |
+
+Accuracy on the original test set: **0.9518** (Cohen's kappa 0.9488, balanced accuracy
+0.9589). Held-out-mouse cross-validation predicted 95.18% and held-out-imaging-run 95.24%,
+so the test figure was anticipated by cross-validation rather than selected on.
 
 Because prizes are decided on a validation cohort, we also measured generalisation to
 unseen groups rather than unseen cells. Refitting and scoring by held-out group gives

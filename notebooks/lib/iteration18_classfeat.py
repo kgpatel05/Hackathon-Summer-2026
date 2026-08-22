@@ -21,6 +21,7 @@ import iteration18_atlas as A
 import iteration5_features as F
 
 CACHE = B.OUT / "class_features.npz"
+CACHE.parent.mkdir(parents=True, exist_ok=True)
 KNN_K = (1, 5, 15, 50)
 COMP_K = (5, 10, 25, 60, 150)
 

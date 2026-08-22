@@ -14,6 +14,7 @@ import iteration18_base as B
 import iteration19_laminae as L
 
 OUT = Path("outputs/iteration19")
+OUT.mkdir(parents=True, exist_ok=True)
 
 
 def build(name):

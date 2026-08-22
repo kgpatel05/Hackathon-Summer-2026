@@ -28,6 +28,7 @@ import iteration5_features as F
 
 CACHE = B.OUT / "atlas_nn3_block.npz"
 CACHE4 = B.OUT / "atlas_nn4_block.npz"
+CACHE4.parent.mkdir(parents=True, exist_ok=True)
 K = 12
 
 

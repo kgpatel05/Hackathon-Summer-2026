@@ -17,6 +17,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 import iteration5_features as F
 
 CACHE = Path("outputs/iteration18/atlas_cache.npz")
+CACHE.parent.mkdir(parents=True, exist_ok=True)
 OBS_COLS = ["Region", "Excitatory_vs_Inhibitory", "1st round cluster",
             "2nd round subcluster", "Laminae", "Markers", "Neurotransmitter",
             "Axial level", "Mouse ID", "Section ID", "Datasets", "Gender"]

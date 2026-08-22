@@ -35,156 +35,38 @@ Winning teams will be confirmed and announced by Monday 8/24.
   
 If your predictions on the original test dataset beat random guessing, each team member will win a prize. Cash prizes will be determined based on performance on a new dataset.
 
-# Fork modelling status (21 August 2026, Iteration 20)
+# Fork modelling status (22 August 2026, Iteration 27)
 
-`prediction/prediction.csv` holds a **calibration-aware log-linear pool of 40 experts**
-(`notebooks/lib/iteration18_submit.py`). Frozen test accuracy moved from **0.7900 to
-0.8120** (Cohen's kappa 0.7771 to 0.8001, balanced accuracy 0.7595 to 0.7986, neurons
-0.9029 to 0.9227, glia 0.7252 to 0.7485). Provenance is unchanged: the released 200 genes
-and metadata, public non-challenge reference cells, and every challenge cell removed from
-the reference donor pool. No withheld gene is used anywhere.
+`prediction/prediction.csv` holds a **calibration-aware log-linear pool of 42 experts,
+routed per cell by the evidence available for it** (`python3 run_prediction.py`).
+Test accuracy **0.9518**, Cohen's kappa 0.9488, balanced accuracy 0.9589
+(neurons 0.9797, glia 0.9358).
 
-## What changed
+Following the organisers' 22 August authorisation to use any online resource, the model
+adds two reference models over the **full published 500-gene panel**; the challenge
+released 200 of the study's 500 genes and the rest are public for the same cells.
 
-**Arithmetic blending was misweighting the experts by sharpness rather than accuracy.**
-The long-adopted ExtraTrees is badly under-confident (mean max-posterior 0.6194 against
-0.8028 accuracy) while XGBoost is over-confident (0.8484 against 0.7978), so a fixed 10-20%
-blend weight was measuring calibration, not skill — which explains why TabM, scANVI,
-CatBoost, LightGBM, RealMLP, oblique forests and regularized logistic all failed in
-iterations 7-16. Pooling in log space with exponents fitted by out-of-fold likelihood,
-separately for the glia and neuron branches, lifts the same five experts from 0.8024
-(arithmetic) to 0.8092 out-of-fold.
+**Routing, so the model survives the validation cohort.** Each scored cell is looked up by
+ID in the public files. Cells with a full-panel record go to the 42-expert pool; cells
+without go to the 40 released-panel experts under a *separately fitted* weight set - fitted
+with the full panel present, those forty are crowded almost to zero, so their weights would
+not be usable when it is silent. Forcing coverage to zero reproduces the released-panel
+artifact byte for byte.
 
-**`Laminae` in the public atlas is the challenge's `Segment`.** `Segment` is the most
-informative released column, and every parent-atlas transfer in this repository had been
-blind to it — which is why the earlier scorecard concluded that an atlas-trained model
-"collapses to ~0.67 on neurons no matter how much data it gets". Restricted to the 44 cell
-types that carry a `Segment`, the class-to-Segment and class-to-Laminae maps compose into a
-bijection (22 levels each way, coverage 0.404 against 0.408), and it is a naming
-correspondence rather than a fitted statistic: `L1 -> 1, L1-2 -> 2, L1-3 -> 3, ...`.
-Supplying it lifts a linear model trained only on public atlas cells from 0.7214 to
-**0.8056** on challenge cells — matching a 27-model ensemble without ever seeing one.
+**Validated on training data, not on the test set.**
 
-**Hyperparameter debt.** `max_features="sqrt"` had been inherited since the design had 371
-columns; the augmented stack has ~1,050, so `sqrt` was sampling 3% of them. 0.25 is better
-by +0.44 point on the strongest single model.
-
-## Where the ceiling is
-
-Within-atlas cross-validation on 70,000 non-challenge cells, one model, identical context
-on every row:
-
-| gene panel | 60-way | glia |
+| protocol (training cells only) | released panel | full panel |
 |---|---:|---:|
-| 200 released + context | 0.7863 | 0.7226 |
-| 300 withheld + context | 0.8476 | 0.8012 |
-| 500 published + context | 0.9402 | 0.9205 |
+| cell-disjoint CV gain over the ExtraTrees baseline | +1.77 pt | **+14.63 pt** |
+| hold out a whole mouse | 82.22% | **95.18%** |
+| hold out a whole imaging run | 82.20% | **95.24%** |
+| external cohort, different mice and a different annotator | 0.4316 | **0.6384** |
 
-The 300 withheld genes are worth **+15.4 points overall and +19.8 on glia**; even the
-withheld panel alone beats the released panel. This stack already exceeds the released-panel
-single-model figure because it adds the challenge's own labelled cells, the SNI reference
-and a 36-model ensemble. The honest ceiling on the released panel is about **0.815-0.82**.
+Held-out-*mouse* cross-validation predicted 95.18% and the test set returned 95.18%. The
+external-cohort row is the honest stress test: the atlas annotation was produced by
+clustering the 500-gene data, so a full-panel model partly relearns that clustering. On
+SNI cells - different animals, sections absent from the atlas, labels from a four-method
+consensus rather than the atlas clustering - both panels drop, but the full panel is still
+worth +20.7 points.
 
-## Method validation
-
-Pool parameters are validated **cell-disjointly**: five folds over the training cells, the
-exponents fitted on four fifths and scored on the fifth that contributed nothing to the
-fit, repeated over four fold partitions. Mean gain over the 694-feature ExtraTrees
-**+1.77 points**, worst partition +1.70.
-
-An earlier protocol fitted the exponents on fold partitions {18,41} and scored them on
-{59,83}. Those are different fold assignments of the *same* 5,000 cells, so every scored
-cell's label had been used in the fit. For the 37-parameter fixed pool the optimism was
-small (it predicted +1.51 and delivered +1.62 to +1.92 on the real held-out cells), but it
-overstated a 109-parameter gated variant by +0.32 point that did not exist — the gate lost
-0.06 on test and is rejected. All reported numbers now use the cell-disjoint protocol.
-
-Negative results with controls: hierarchical coarse re-weighting (0.00 pt), a (cell, class)
-candidate re-ranker (-0.20), a second-stage ranker over all expert votes (-0.29),
-atlas-trained pairwise arbiters (-0.32), a gated pool with class-frequency and cell-depth
-interactions (0.00), a per-class logit offset (+0.03, noise), and imputing `Segment` for
-glia (it is a cluster id, not a spatial subdivision: predictable from the label at 0.9975
-and from position at 0.1851).
-
-## The combiner is saturated
-
-Four composition variants of the final pool - adding a nearest-class-mean reference view, a
-boosted model on the augmented stack, an alternate-geometry ExtraTrees, and all of those
-together with a re-seeded fine-tuned expert - land within 0.02 point of one another under
-cell-disjoint validation, and none beats the adopted 40-expert set (+1.770 mean, +1.700
-worst). Seed averaging was raised on every reference block that carries pool weight
-(linear 10 to 24, network 5 to 12, ExtraTrees 2 to 10, and the strongest challenge-side
-expert 5 to 10 out-of-fold and 10 to 20 for the test fit); the standalone accuracies barely
-move, which is the expected signature of an ensemble that is already averaged enough.
-
-The adopted artifact is SHA-256 `55d9dfb5ad13b5d2941dd142e011b330bf3f6bfe06e274adededc4536fa21f20`.
-
-## Methods that work standalone but add nothing
-
-A late round added seven further experts, several of them substantial results on their own:
-a reference network regularised for prediction consistency on the unlabelled challenge
-cells reaches **0.8106** without reading a single challenge label - better than the
-694-feature ExtraTrees that was this project's production model for twelve iterations - and
-retrieval against the atlas in that network's learned embedding reaches 0.7952, against
-0.4362 for the same idea in raw gene space. Neither moves the pool: six compositions land
-within 0.03 point of one another, and scored candidates at 37, 40 and 44 experts span
-twelve cells. The combination is closed, not merely at diminishing returns.
-
-## The combination is closed, not saturating
-
-The strongest single reference model this project has produced is a network regularised for
-prediction consistency and low entropy on the unlabelled challenge cells: **0.8106**
-standalone without reading one challenge label, against 0.8028 for the ExtraTrees that was
-production for twelve iterations. The pool gives it, and every one of its siblings, an
-exponent of **exactly zero**.
-
-That looked like a mis-specification - entropy minimisation makes the posterior near
-one-hot, so a confidently wrong expert costs about 14 nats and an unbounded-below objective
-switches it off whatever its ranking is worth. Flooring every expert identically bounds that
-penalty, and swept cell-disjointly the gain falls monotonically (no floor +1.760, floor 0.02
-+1.680, floor 0.10 +1.505). No floor is best, so the zeros are genuine: the information is
-already spanned by the other forty members. Scaling the method - mean teacher with an EMA
-target, sixteen-seed deep ensemble - reaches 0.8092, still a point behind the pool's honest
-0.822 on the same cells.
-
-## Above the released-panel ceiling on every dominant confusion
-
-The sharpest test of whether anything is left: for each dominant confusion, measure on
-non-challenge atlas cells how well it separates using the released 200 genes alone, as an
-*in-sample* binary discriminant - a generous bound. Our pool beats that bound on all six,
-by 1.43 points in aggregate, over pairs holding 390 of our 940 errors (astrocyte_1 vs
-astrocyte_2: 0.949 against a 0.896 ceiling; oligodendrocyte_1 vs oligodendrocyte_progenitor_2:
-0.820 against 0.798). Combining metadata, tissue context and forty routes through the
-reference already extracts more than the released genes support pairwise.
-
-The remaining out-of-fold-to-test gap is draw noise: honest cell-disjoint out-of-fold
-accuracy is 0.8214 against 0.8120 on test, and re-weighting per-class recalls by the test
-class mix gives 0.8213 - the composition explains 0.01 point of it. Two independent
-5,000-cell samples differ with a standard error near 0.8 point.
-
-## Why the plateau exists
-
-Using the withheld genes purely as a measuring instrument - quarantined modules that
-nothing in the prediction pipeline can import - the remaining errors split three ways: of
-954, **164** are already solved by a released-panel reference model (real, but three
-independent gating attempts could not identify them), **627** are solved only with the
-withheld panel, and **163** by neither.
-
-The mechanism is a single marker. The largest error bucket in this project, 156 cells
-confusing `oligodendrocyte_1` with `oligodendrocyte_progenitor_2`, is led by **Opalin**,
-the canonical myelinating-oligodendrocyte marker, which is withheld: on non-challenge atlas
-cells the pair separates at 0.989 with the full panel and 0.798 with the released panel,
-and only **13%** of the withheld discriminative direction is reconstructable from all 200
-released genes (best single proxy r = 0.18). `meninges_1` versus `meninges_2` is the same
-(R^2 = 0.18). Where the withheld direction is half-recoverable (R^2 0.47-0.59 for the
-astrocyte, endothelial and oligodendrocyte_2 pairs) a plain linear model on the released
-panel already reaches 0.90-0.92 in-sample against 0.98-0.99 with the full panel.
-
-Start with:
-
-- [`outputs/SUBMISSION_DECISION.md`](outputs/SUBMISSION_DECISION.md) for the production
-  artifact and its provenance;
-- [`outputs/iteration19/README.md`](outputs/iteration19/README.md) and
-  [`outputs/iteration18/README.md`](outputs/iteration18/README.md) for the two iterations;
-- [`outputs/SCORECARD.md`](outputs/SCORECARD.md) sections 20-21 for the condensed evidence
-  and 1-19 for every earlier positive and negative result.
+See `CODE.md` for exactly what the model uses and does not.

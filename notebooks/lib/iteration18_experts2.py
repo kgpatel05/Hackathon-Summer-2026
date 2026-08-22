@@ -276,6 +276,14 @@ def run(seed=18, folds=5, names=("etnog", "etgene", "nb", "knnp")):
     ftl = Path("outputs/iteration19") / f"atlasftlam_oof_seed{seed}.npz"
     if ftl.exists():
         fixed["atlasftlam"] = np.load(ftl)["probs"].astype(np.float32)
+    for nm in ("full500_nn", "full500_lin"):
+        f_ = Path("outputs/iteration27") / f"{nm}.npz"
+        if f_.exists():
+            fixed[nm] = np.load(f_)["probs"][:len(y)].astype(np.float32)
+    for nm in ("full500_nn", "full500_lin"):
+        f_ = Path("outputs/iteration27") / f"{nm}.npz"
+        if f_.exists():
+            fixed[nm] = np.load(f_)["probs"][:len(y)].astype(np.float32)
     rk = B.OUT / f"rankexpert_seed{seed}.npz"
     if rk.exists():
         fixed["rank"] = np.load(rk)["probs"].astype(np.float32)

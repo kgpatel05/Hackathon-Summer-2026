@@ -20,6 +20,7 @@ import iteration18_atlas as A
 import iteration5_features as F
 
 CACHE = B.OUT / "atlas_nn_block.npz"
+CACHE.parent.mkdir(parents=True, exist_ok=True)
 CATS = [("obs_Datasets", "Datasets"), ("obs_Gender", "Gender"),
         ("obs_Region", "Region"), ("obs_Excitatory_vs_Inhibitory",
                                    "Excitatory_vs_Inhibitory"),

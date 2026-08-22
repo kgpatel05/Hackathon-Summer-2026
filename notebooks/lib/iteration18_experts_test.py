@@ -19,6 +19,7 @@ import iteration18_experts2 as E2
 import iteration5_models as M
 
 CACHE = B.OUT / "experts_test.npz"
+CACHE.parent.mkdir(parents=True, exist_ok=True)
 
 
 def main(names=None):
@@ -59,6 +60,10 @@ def main(names=None):
                      ("atlaslam_lin2", "../iteration19/atlaslam_lin2.npz"),
                      ("atlaslam_nn3", "../iteration19/atlaslam_nn3.npz"),
                      ("atlasknn", "../iteration19/atlasknn.npz"),
+                     ("full500_nn", "../iteration27/full500_nn.npz"),
+                     ("full500_lin", "../iteration27/full500_lin.npz"),
+                     ("full500_nn", "../iteration27/full500_nn.npz"),
+                     ("full500_lin", "../iteration27/full500_lin.npz"),
                      ("atlascons", "../iteration19/atlascons.npz"),
                      ("atlascons2", "../iteration19/atlascons2.npz"),
                      ("atlascons_md", "../iteration19/atlascons_md.npz"),

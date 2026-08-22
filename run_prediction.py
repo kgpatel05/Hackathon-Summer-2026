@@ -44,6 +44,7 @@ DERIVED = [
     "outputs/iteration18/experts_test.npz",
     "outputs/iteration18/atlasft_pretrained.pt",
     "outputs/iteration18/atlasft_test.npz",
+    "outputs/iteration27/challenge_full_panel.npz",
 ]
 DERIVED_GLOBS = [
     "outputs/iteration18/atlas_nn*_block.npz",
@@ -53,6 +54,7 @@ DERIVED_GLOBS = [
     "outputs/iteration18/atlasft_oof_seed*.npz",
     "outputs/iteration19/*.npz",
     "outputs/iteration19/*.pt",
+    "outputs/iteration27/*.npz",
 ]
 
 PARTITIONS = ("18", "41", "59", "83")
@@ -63,7 +65,7 @@ E2 = ("etnog,etgene,etnn,nb,knnp,meta,meta2,sni,atlaslr,atlaset,atlasnn,atlasnn2
       "atlasnn3,atlasnn4,atlasnn5,atlasnn_md,sninn,atlaslin,atlaslin_g,gliann,"
       "atlaslam_lin,atlaslam_nn,atlaslam_md,atlaslam_mdlin,atlaslam_lin2,atlaslam_nn3,"
       "atlaslam_et,atlaslam_et2,atlaslam_rf_0.1,atlasft,atlasftlam,etaug,etaug3,"
-      "etaug4_0.25_3,xgbaug")
+      "etaug4_0.25_3,xgbaug,full500_nn,full500_lin")
 
 
 def stages():
@@ -73,15 +75,17 @@ def stages():
          ("atlas cache (challenge cells removed)",
           [sys.executable, str(LIB / "iteration18_atlas.py")],
           ["outputs/iteration18/atlas_cache.npz"]),
+         # order matters: the hierarchy map is derived from the incumbent's out-of-fold
+         # probabilities, so the incumbent must be fitted first
+         ("incumbent probabilities",
+          [sys.executable, str(LIB / "iteration18_base.py")],
+          ["outputs/iteration18/incumbent_probs.npz"]),
          ("published clustering hierarchy",
           [sys.executable, str(LIB / "iteration18_hierarchy.py")],
           ["outputs/iteration18/hierarchy_maps.npz"]),
          ("per-(cell, class) channels",
           [sys.executable, str(LIB / "iteration18_classfeat.py")],
           ["outputs/iteration18/class_features.npz"]),
-         ("incumbent probabilities",
-          [sys.executable, str(LIB / "iteration18_base.py")],
-          ["outputs/iteration18/incumbent_probs.npz"]),
          ("atlas networks",
           [sys.executable, str(LIB / "iteration18_atlasnn.py")],
           ["outputs/iteration18/atlas_nn_block.npz"]),
@@ -110,6 +114,10 @@ def stages():
          ("reference ExtraTrees (base)",
           [sys.executable, str(LIB / "iteration19_atlasbank.py"), "atlaslam_et"],
           ["outputs/iteration19/atlaslam_et.npz"]),
+         ("full published panel: lookup and reference models",
+          [sys.executable, str(LIB / "iteration27_fullpanel.py")],
+          ["outputs/iteration27/full500_nn.npz",
+           "outputs/iteration27/full500_lin.npz"]),
          ("reference ExtraTrees (tuned) and RandomForest",
           [sys.executable, str(LIB / "iteration19_atlasbank.py"),
            "atlaslam_et_0.1_1_600_10", "atlaslam_rf_0.1"],
