@@ -79,12 +79,13 @@ hierarchical metadata prior.
 `Datasets`, `Mouse_ID` and `Section_ID` name this cohort rather than describing a cell.
 One-hot encoded they were 124 of 409 columns, and on a validation cohort from new tissue
 every one is zero, so the model would lose a third of its stack exactly when it is scored.
-Removing them is better on both honest protocols (+0.0034 cell-disjoint, +0.0028
-leave-one-mouse-out) and costs 0.0046 on the released test set, whose cells share all 108
-sections and all 10 mice with training and can therefore be identified by name. The two
-protocols that hold out data disagree with the one that does not; the model follows the
-two. `Section_ID` is still read for spatial registration and niche grouping, where only
-the grouping matters and the label is never encoded.
+Removing them is worth +0.0034 cell-disjoint and +0.0028 leave-one-mouse-out, and costs
+0.0046 on the released test set and 0.0021 on the simulated new-tissue cohort. The four
+measurements split two against two and no gap exceeds 23 cells, so this is a wash rather
+than a win: the identifier-free stack was kept for being 285 columns instead of 409 and
+for not depending on how a cohort happens to be named, not because it measures better.
+`Section_ID` is still read for spatial registration and niche grouping, where only the
+grouping matters and the label is never encoded.
 
 ### What was deliberately left out
 
@@ -142,10 +143,17 @@ It completed in 28 minutes and scored **0.7845** on that cohort, against 0.7844 
 5,000 — so the pipeline is insensitive to cohort size, not merely tolerant of it.
 
 A second rehearsal replaced every `Section_ID`, `Mouse_ID` and `Datasets` value with one
-never seen in training — the "new tissue" case — on a 4,211-cell cohort. That run is what
-removed the cohort identifiers from the model: the earlier version, which one-hot encoded
-them, fell from 0.7844 to 0.7758 there, because 124 of its 409 columns silently went to
-zero. The shipped model reads no identifier, so novel ones cost it nothing.
+never seen in training — the "new tissue" case — on a 4,211-cell cohort. The earlier
+version, which one-hot encoded those columns, fell from 0.7844 to 0.7758 there.
+
+That run is also worth reporting against expectation. The shipped model encodes no
+identifier, so it should have been indifferent; it was not, scoring 0.7737 against 0.7773
+for the same cells in the ordinary run. The reason is that `Section_ID` does more than
+label a cell: it groups the spatial registration and the niche neighbourhoods. Renaming
+the sections splits each one into a training half and a validation half, so a validation
+cell's nearest neighbours are no longer the labelled cells beside it. That cost is
+structural, applies to either model, and is the honest price of scoring genuinely new
+tissue — not something the feature set can be arranged around.
 
 Two further properties were checked rather than assumed:
 
