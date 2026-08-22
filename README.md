@@ -37,27 +37,33 @@ If your predictions on the original test dataset beat random guessing, each team
 
 # Fork modelling status (22 August 2026)
 
-`prediction/prediction.csv` holds a **calibration-aware log-linear pool of 26 experts**
-built without the source dataset (`python3 run_prediction.py`).
+`prediction/prediction.csv` holds a **calibration-aware log-linear pool of 13 experts**
+trained only on the released data (`python3 run_prediction.py`).
 
 Per the 22 August clarification that training on the source data is not in the spirit of
 the event, everything derived from `MERFISH_spinal_cord_0531.h5ad` was removed - the atlas
 transfers, the neighbourhood-composition features, the Laminae/Segment correspondence, the
-fine-tuned reference networks and the full 500-gene panel. That cost 0.9518 to 0.7872 on
-the released test set. Removal is enforced rather than promised: no shipped module can open
-that file, and `no_source_data.py` blocks it at runtime.
+fine-tuned reference networks and the full 500-gene panel.
 
-What remains is the released 200 genes and metadata, the challenge cells' own spatial
-neighbourhoods, and `SNI_merged_0531.h5ad` - a different experiment on different animals,
-used far harder than before. SNI carries five independent annotations (voting, RCTD,
-Seurat, SingleR, Tangram); transfers trained on each make different mistakes, and pooling
-them was worth +0.32 point.
+The companion `SNI_merged_0531.h5ad` was removed as well. That one is worth spelling out,
+because it looks like outside data - a different experiment on different animals - and an
+earlier version of this model leaned on it hard. But it belongs to the same publication,
+whose methods state its cell types were assigned by transferring labels from "the manually
+annotated MERFISH reference dataset" using SingleR, Tangram, Seurat and RCTD. Its labels
+are the source atlas's annotations carried onto other cells, so keeping it while dropping
+the atlas would have been a distinction without a difference. Removal is enforced rather
+than promised: nothing shipped here opens an `.h5ad`, and `no_source_data.py` blocks the
+source file at runtime.
+
+Together those two removals cost 0.9518 to 0.7838 on the released test set. What remains
+is the released 200 genes and metadata plus the challenge cells' own spatial
+neighbourhoods - and the repository is now self-contained, with no external downloads.
 
 | protocol (training cells only) | accuracy |
 |---|---:|
-| cell-disjoint cross-validation | **0.7942** |
-| hold out a whole mouse | **0.7938** |
-| test set | 0.7872 |
+| cell-disjoint cross-validation | **0.7736** |
+| hold out a whole mouse | **0.7740** |
+| released test set | 0.7838 |
 
 Holding out an entire animal is no worse than holding out random cells, so the model is not
 cohort-specific. See `CODE.md` for exactly what it uses and does not.

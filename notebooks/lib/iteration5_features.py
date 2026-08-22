@@ -7,7 +7,6 @@ fold-train mask and must be rebuilt per fold.
 """
 from pathlib import Path
 
-import h5py
 import numpy as np
 import pandas as pd
 from scipy.spatial import ConvexHull
@@ -16,7 +15,6 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.neighbors import NearestNeighbors
 
 DATA_DIR = Path("data")
-EXTERNAL = DATA_DIR / "external" / "SNI_merged_0531.h5ad"
 
 TARGET = "MERFISH_cell_type_annotation"
 CATEGORICAL_META = [
@@ -80,71 +78,6 @@ def base_block(counts, meta, encoder):
 
 # ----------------------------------------------------------------------
 # B1: external reference transfer (the iteration-4 bug, fixed)
-# ----------------------------------------------------------------------
-def _normalise_label(name):
-    name = name.replace(" ", "_").replace("-", "_")
-    return "VH_in_Chat" if name == "M_in_Chat" else name
-
-
-def load_reference(gene_order, label_column="voting"):
-    """Read the external reference over the shared gene panel.
-
-    `label_column` is stated explicitly on purpose: iteration 4 auto-detected it
-    and picked `Section ID` (109 tissue sections), which silently turned every
-    reference centroid into a tissue-section pseudobulk.
-    """
-    with h5py.File(EXTERNAL, "r") as handle:
-        reference_genes = [g.decode() for g in handle["var/_index"][:]]
-        lookup = {g: i for i, g in enumerate(reference_genes)}
-
-        missing = [g for g in gene_order if g not in lookup]
-        if missing:
-            raise ValueError(f"{len(missing)} challenge genes absent from reference")
-
-        columns = np.array([lookup[g] for g in gene_order])
-        order = np.argsort(columns)
-        matrix = handle["X"][:, columns[order]].astype(np.float32)
-        matrix = matrix[:, np.argsort(order)]
-
-        categories = [c.decode() for c in handle[f"obs/{label_column}/categories"][:]]
-        codes = handle[f"obs/{label_column}/codes"][:]
-
-    labels = np.array([
-        _normalise_label(categories[c]) if c >= 0 else "NA" for c in codes
-    ])
-    usable = matrix.sum(axis=1) > 0
-    return matrix[usable], labels[usable]
-
-
-def reference_transfer(gene_order, classes, matrices, label_column="voting", C=0.1):
-    """Fit one L2 logistic on the reference, return aligned probabilities.
-
-    Sees zero hackathon labels, so it is safe to compute once outside the CV loop.
-    """
-    reference, labels = load_reference(gene_order, label_column)
-
-    unmapped = sorted(set(labels) - set(classes))
-    if unmapped:
-        raise ValueError(f"reference labels absent from challenge taxonomy: {unmapped}")
-
-    # lbfgs multinomial fitting is single-process in current sklearn; spelling this out
-    # also avoids joblib semaphore probes in restricted macOS/Codex environments.
-    model = LogisticRegression(C=C, max_iter=2000, n_jobs=1)
-    model.fit(zscore(log_cpm(reference)), labels)
-
-    index = {c: i for i, c in enumerate(classes)}
-    outputs = []
-    for counts in matrices:
-        raw = model.predict_proba(zscore(log_cpm(counts.to_numpy())))
-        aligned = np.zeros((len(raw), len(classes)), np.float32)
-        for j, label in enumerate(model.classes_):
-            aligned[:, index[label]] = raw[:, j]
-        outputs.append(aligned)
-    return outputs, reference, labels
-
-
-# ----------------------------------------------------------------------
-# B7: anatomically registered spatial features
 # ----------------------------------------------------------------------
 def registered_spatial(meta_all, neuron_mask):
     """Put every section in a common frame, then derive anatomical distances.

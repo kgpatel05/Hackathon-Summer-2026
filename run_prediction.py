@@ -15,8 +15,11 @@ writes the submission.  Stages are resumable.
 
 SOURCE DATA IS NOT USED.  Per the 22 August clarification, nothing here trains on the
 published dataset the challenge was carved from.  The model sees the released 200 genes,
-the released metadata, the challenge cells' own spatial neighbourhoods, and
-SNI_merged_0531.h5ad - a different experiment on different animals.
+the released metadata, and the challenge cells' own spatial neighbourhoods - nothing
+else.  The companion SNI dataset was dropped as well: its labels were produced by
+transferring the source atlas's annotations, so training on them would have been
+training on the source labels indirectly.  Everything needed to reproduce the
+submission is in this repository.
 """
 from __future__ import annotations
 
@@ -36,13 +39,49 @@ DERIVED_GLOBS = ["outputs/iteration28/*.npz", "outputs/iteration28/predictions/*
 PARTITIONS = ("18", "41", "59", "83")
 
 
+REQUIRED_META = ["Datasets", "Region", "Excitatory_vs_Inhibitory", "Segment",
+                 "Gender", "Mouse_ID", "AP_position", "Section_ID"]
+
+
+def preflight():
+    """Check the cohort before spending an hour on it.
+
+    The validation cohort replaces meta_test.csv/counts_test.csv wholesale, so it may
+    differ in size, in section and mouse identifiers, and in which metadata values
+    appear.  Size and unseen categorical values are handled (nothing downstream assumes
+    a cell count, and the one-hot encoder ignores unknowns).  A changed *gene panel* or
+    a missing metadata column is not recoverable, so fail here with a clear message
+    rather than deep inside a learner.
+    """
+    import pandas as pd
+    d = ROOT / "data"
+    tr_c = pd.read_csv(d / "counts_train.csv", index_col=0, nrows=1)
+    te_c = pd.read_csv(d / "counts_test.csv", index_col=0, nrows=1)
+    miss = sorted(set(tr_c.columns) - set(te_c.columns))
+    extra = sorted(set(te_c.columns) - set(tr_c.columns))
+    if miss or extra:
+        raise SystemExit(
+            "counts_test.csv gene panel does not match counts_train.csv.\n"
+            f"  train genes {len(tr_c.columns)}, test genes {len(te_c.columns)}\n"
+            + (f"  missing from test: {miss[:8]}\n" if miss else "")
+            + (f"  unexpected in test: {extra[:8]}\n" if extra else "")
+            + "  the model is fitted on the training panel; it cannot score a different one")
+    if list(tr_c.columns) != list(te_c.columns):
+        # harmless: load_challenge() reindexes the test frame onto the training panel
+        print("[preflight] test genes are in a different order; realigned on load")
+    te_m = pd.read_csv(d / "meta_test.csv", index_col=0, nrows=5)
+    absent = [c for c in REQUIRED_META if c not in te_m.columns]
+    if absent:
+        raise SystemExit(f"meta_test.csv is missing required column(s): {absent}\n"
+                         f"  present: {list(te_m.columns)}")
+    n_te = sum(1 for _ in (d / "meta_test.csv").open()) - 1
+    print(f"[preflight] {n_te} cells, {len(te_c.columns)} genes, metadata complete")
+
+
 def stages():
     s = [("source-free feature stack",
           [sys.executable, str(LIB / "iteration28_clean.py"), "features"],
-          ["outputs/iteration28/features.npz"]),
-         ("outside-data expert bank (SNI)",
-          [sys.executable, str(LIB / "iteration28_sni.py")],
-          ["outputs/iteration28/sni_experts.npz"])]
+          ["outputs/iteration28/features.npz"])]
     for p in PARTITIONS:
         s.append((f"experts, partition {p}",
                   [sys.executable, str(LIB / "iteration28_clean.py"), "experts", p],
@@ -80,6 +119,7 @@ def wipe():
 def main():
     force, dry = "--force" in sys.argv, "--dry-run" in sys.argv
     OUT.mkdir(parents=True, exist_ok=True)
+    preflight()
     fp = fingerprint()
     old = FINGERPRINT.read_text().strip() if FINGERPRINT.exists() else ""
     changed = force or (old and old != fp)

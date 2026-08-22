@@ -7,9 +7,11 @@ python3 run_prediction.py
 ```
 
 It re-runs unchanged after `data/meta_test.csv` and `data/counts_test.csv` are replaced by
-the validation cohort: it fingerprints the input data, discards every derived cache if the
-data changed, rebuilds every expert, refits the pool on the released **training** cells,
-and writes `prediction/prediction.csv`. `--dry-run` lists the stages.
+the validation cohort: it checks the cohort, fingerprints the input data, discards every
+derived cache if the data changed, rebuilds every expert, refits the pool on the released
+**training** cells, and writes `prediction/prediction.csv`. `--dry-run` lists the stages.
+
+Everything needed is in this repository. There are no external downloads.
 
 ## The source dataset is not used
 
@@ -18,19 +20,31 @@ challenge was carved out of, `MERFISH_spinal_cord_0531.h5ad` — is not in the s
 event. That file supplied the previous version of this model with its largest components.
 All of it has been removed: the atlas transfers, the neighbourhood-composition and
 atlas-niche feature blocks, the Laminae/Segment correspondence, the fine-tuned reference
-networks, and the full 500-gene panel. On the released test set that cost 0.9518 → 0.7864.
+networks, and the full 500-gene panel.
+
+**The companion SNI dataset has been removed as well**, and that needs explaining, because
+it is not obviously source data — `SNI_merged_0531.h5ad` is a different experiment on
+different animals, and an earlier version of this model leaned on it hard. It is a
+companion dataset of the same publication, whose methods state that its cell types were
+assigned by "an ensemble label transfer strategy that integrates four state-of-the-art
+methods: SingleR, Tangram, Seurat and RCTD", each predicting labels "using annotations from
+the manually annotated MERFISH reference dataset". Its labels are therefore the source
+atlas's annotations carried onto other cells. Training on them is training on the source
+labels at one remove, so dropping the atlas while keeping SNI would have been a distinction
+without a difference.
 
 Removal is enforced, not asserted:
 
-* **no shipped module can read it.** The source-atlas functions were deleted from
-  `iteration5_features.py`; no file in this repository opens that dataset.
-* **`no_source_data.py` blocks it at runtime.** It replaces `h5py.File` so that any attempt
-  to open `MERFISH_spinal_cord_0531.h5ad` raises immediately. Both pipeline entry points
-  import it. Outside data passes through untouched.
+* **no shipped module can read either file.** The atlas functions and the SNI reference
+  loader were deleted outright; nothing in this repository opens an `.h5ad`.
+* **`no_source_data.py` blocks the source file at runtime.** It replaces `h5py.File` so any
+  attempt to open `MERFISH_spinal_cord_0531.h5ad` raises immediately.
+* **verified by construction.** The whole pipeline was re-run from a clone that does not
+  contain either file.
 
 ## The model
 
-A calibration-aware log-linear pool of 26 experts,
+A calibration-aware log-linear pool of 13 experts,
 
 ```
 p(class | cell)  ∝  Π_m  p_m(class | cell)^{w_m}  ·  prior(class)^{−a}
@@ -41,55 +55,58 @@ released training cells, separately for the glia and neuron branches, pooled ove
 partitions. A hard metadata-compatibility mask removes (cell, class) pairs whose
 `Region`/`Excitatory_vs_Inhibitory`/`Segment` combination never occurs in training.
 
-Feature stack (469 columns), all of it released data or outside data:
+Feature stack (409 columns), all of it released data:
 
 | block | cols | source |
 |---|---:|---|
 | `BASE` | 371 | the 200 released genes, 9 QC columns, metadata one-hot |
-| `EXT` | 60 | posteriors transferred from SNI, restricted to the 200 shared genes |
 | `SPA` | 8 | registered spatial coordinates |
 | `NIC` | 30 | niche expression over the challenge cells' own released counts |
 
-Experts: ExtraTrees (four geometries), RandomForest, XGBoost, logistic and two neural
-models on that stack; the same on a stack augmented with the outside-data posteriors; a
-count-native multinomial fitted on the released training counts; a hierarchical metadata
-prior; and ten transfers from `SNI_merged_0531.h5ad`.
+Experts: ExtraTrees in five geometries (full stack, genes only, context only, wide, and two
+multi-fold variants), RandomForest, XGBoost, logistic regression and two neural models on
+that stack, a count-native multinomial fitted on the released training counts, and a
+hierarchical metadata prior.
 
-**SNI is used far harder than before.** It is a different experiment on different animals —
-outside data — and 11× the size of the released training set. It carries five independent
-annotations (`voting`, RCTD, Seurat, SingleR, Tangram); each is a differently-biased view,
-so transfers trained on them make different mistakes, which is what the pool exploits.
-Adding them was worth +0.32 point.
+### What was deliberately left out
 
-*Disclosure:* SNI's own labels were produced by its authors by transferring from the
-published atlas. We do not touch that atlas; we use a separate published dataset and the
-annotations released with it.
+Spatial propagation of the *training* labels — a class histogram over each cell's nearest
+labelled neighbours — is legitimate and would score well here, because the released test
+cells share all 108 sections and all 10 mice with the training cells, giving every test
+cell about 70 labelled neighbours. It is not used. `meta_train.csv` is not replaced by the
+validation cohort, so if the validation cells come from new sections that feature collapses
+to zeros and any expert leaning on it fails. It buys accuracy on this cohort at the cost of
+the one that decides the prize.
 
 ## Data used
 
 * `data/counts_train.csv`, `data/meta_train.csv` — released genes, metadata, labels
 * `data/counts_test.csv`, `data/meta_test.csv` — released genes and metadata
-* `data/external/SNI_merged_0531.h5ad` — outside data, restricted to the 200 shared genes
 
 ## Not used
 
 * the source dataset, in any form
+* any dataset whose labels were transferred from it
 * any cell-type label of any test or validation cell
 
 ## Performance
 
-All figures are cross-validated on the released **training** cells except the last line.
+Cross-validated on the released **training** cells. The test line is reported for
+information and was not used to select anything.
 
 | protocol | accuracy |
 |---|---:|
-| cell-disjoint CV (hold out random cells) | **0.7942** |
-| hold out a whole **mouse** | **0.7938** |
-| test set | 0.7872 |
+| cell-disjoint CV (hold out random cells) | **0.7736** |
+| hold out a whole **mouse** | **0.7740** |
+| released test set | 0.7838 |
 
 Holding out an entire animal is no worse than holding out random cells, so the model is not
-cohort-specific and should carry to a validation cohort from new tissue.
+cohort-specific and should carry to a validation cohort from new tissue. That property is
+the reason for the omission described above.
+
+For reference, the version that used SNI scored 0.7854 cell-disjoint CV and 0.7872 on the
+test set; excluding it cost 1.2 points of cross-validated accuracy.
 
 ## Runtime
 
 About one hour end to end on an Apple M3 (the neural experts use the GPU via MPS).
-`data/external/SNI_merged_0531.h5ad` must be present.

@@ -1,23 +1,29 @@
-"""Source-free model: no data from the dataset the challenge was carved out of.
+"""Source-free model: trained only on what the challenge released.
 
 Rule clarification of 22 August: it is not in the spirit of the event to train on the
 source data if discovered, though outside data may be used to inform decisions.  The
 source data is `MERFISH_spinal_cord_0531.h5ad` - the published dataset containing the
 scored cells themselves, their withheld genes and their labels.  Everything derived from
-it is therefore removed: the atlas transfers, the neighbourhood-composition and
-atlas-niche feature blocks, the Laminae/Segment correspondence, the fine-tuned reference
-networks and the full 500-gene panel.
+it is removed: the atlas transfers, the neighbourhood-composition and atlas-niche feature
+blocks, the Laminae/Segment correspondence, the fine-tuned reference networks and the
+full 500-gene panel.
 
-What remains is what the challenge released plus genuinely outside data:
+`SNI_merged_0531.h5ad` is removed too, and that needs saying because it is not obviously
+source data - it is a different experiment on different animals.  But it is a companion
+dataset of the same publication, and that paper's methods state its cell types were
+assigned by transferring labels from "the manually annotated MERFISH reference dataset"
+with SingleR, Tangram, Seurat and RCTD.  Its labels are therefore the source atlas's
+annotations carried onto other cells.  Training on them would be training on the source
+data's labels at one remove, so dropping the atlas while keeping SNI would have been a
+distinction without a difference.  That cost 1.2 points of cross-validated accuracy.
+
+What remains is exactly what the challenge released:
 
     BASE  200 released genes (log1p), 9 QC columns, metadata one-hot          371
-    EXT   posteriors transferred from SNI_merged_0531.h5ad - a DIFFERENT        60
-          experiment on different animals, restricted to the 200 shared genes
     SPA   registered spatial coordinates                                        8
     NIC   niche expression over the challenge cells' own released counts       30
 
-Every expert below is fitted on the released training cells or on SNI; none sees a cell
-from the source atlas.
+Every expert below is fitted on the released training cells alone.
 
     python3 iteration28_clean.py features   build the source-free feature stack
     python3 iteration28_clean.py experts    out-of-fold and test probabilities
@@ -49,6 +55,7 @@ PARTITIONS = (18, 41, 59, 83)
 ALPHA = 0.45
 EPS = 1e-9
 POOL_RIDGE = 1e-3
+SUBMISSION_COLUMN = "MERFISH_cell_type_annotation.y"
 MASK_COLS = ["Region", "Excitatory_vs_Inhibitory", "Segment"]
 
 
@@ -150,11 +157,6 @@ def build_features():
     BASE_TE = F.base_block(counts_test, meta_test, enc)
     print(f"[base]    {BASE_TR.shape} ({time.time()-t0:.0f}s)", flush=True)
 
-    t0 = time.time()
-    (EXT_TR, EXT_TE), REF_X, REF_Y = F.reference_transfer(
-        genes, classes, [counts_train, counts_test], label_column="voting")
-    print(f"[sni]     {len(REF_X)} outside reference cells ({time.time()-t0:.0f}s)",
-          flush=True)
 
     t0 = time.time()
     neuron = (~meta_all["Region"].isna()).to_numpy() & (meta_all["Region"] == 1).to_numpy()
@@ -167,8 +169,8 @@ def build_features():
     print(f"[niche]   {NIC.shape} ({time.time()-t0:.0f}s)", flush=True)
 
     n = len(meta_train)
-    X_tr = np.hstack([BASE_TR, EXT_TR, SPA[:n], NIC[:n]]).astype(np.float32)
-    X_te = np.hstack([BASE_TE, EXT_TE, SPA[n:], NIC[n:]]).astype(np.float32)
+    X_tr = np.hstack([BASE_TR, SPA[:n], NIC[:n]]).astype(np.float32)
+    X_te = np.hstack([BASE_TE, SPA[n:], NIC[n:]]).astype(np.float32)
     np.savez_compressed(FEATURES, X_tr=X_tr, X_te=X_te,
                         classes=np.array(classes), n_base=BASE_TR.shape[1])
     print(f"[cache]   {FEATURES}  train {X_tr.shape}  test {X_te.shape}")
@@ -262,22 +264,6 @@ def _meta_prior(meta, y, fit, val, classes, m1=12.0, m2=25.0):
     return out
 
 
-def augmented(X_tr, X_te):
-    """The released-panel stack plus the outside-data posteriors as extra columns.
-
-    Feeding reference posteriors in as features - rather than only combining them in the
-    pool - has been worth more than combining alone at every previous step.
-    """
-    f = OUT / "sni_experts.npz"
-    if not f.exists():
-        return X_tr, X_te
-    d = np.load(f, allow_pickle=True)
-    n = len(X_tr)
-    tr = [X_tr] + [d[k][:n] for k in sorted(d.files)]
-    te = [X_te] + [d[k][n:] for k in sorted(d.files)]
-    return np.hstack(tr).astype(np.float32), np.hstack(te).astype(np.float32)
-
-
 def experts(seed):
     counts_train, meta_train, counts_test, meta_test = F.load_challenge()
     X_tr, X_te, classes, n_base = load_features()
@@ -286,7 +272,6 @@ def experts(seed):
     cte = counts_test.to_numpy(np.float32)
     gene_sl = slice(0, 209)
     ctx_sl = slice(200, X_tr.shape[1])
-    sni_sl = slice(n_base, n_base + 60)
 
     is_test = seed == "test"
     store = OUT / ("experts_test.npz" if is_test else f"experts_oof_seed{seed}.npz")
@@ -321,31 +306,19 @@ def experts(seed):
               f"({time.time()-t0:.0f}s)", flush=True)
         np.savez_compressed(store, **d)
 
-    # The outside-data expert bank is a fixed block: identical for every fold, so it is
-    # merged in here rather than refitted.  This was previously done by hand, which meant
-    # the pipeline produced a 16-expert pool while the measured model had 26.
-    sni_bank = OUT / "sni_experts.npz"
-    if sni_bank.exists():
-        bank = np.load(sni_bank, allow_pickle=True)
-        for k in sorted(bank.files):
-            d[k] = (bank[k][len(y):] if is_test else bank[k][:len(y)]).astype(np.float32)
-        print(f"  merged {len(bank.files)} outside-data experts", flush=True)
-
     n_out = len(X_te) if is_test else len(y)
     XE = (lambda val: X_te) if is_test else (lambda val: X_tr[val])
     CE = (lambda val: cte) if is_test else (lambda val: ctr[val])
     S = (lambda k: tuple(range(k * (2 if is_test else 1))))
 
-    XA_tr, XA_te = augmented(X_tr, X_te)
-    XAE = (lambda val: XA_te) if is_test else (lambda val: XA_tr[val])
+    # "aug" is historical: these two once read an augmented stack that carried
+    # outside-data posteriors.  They are kept because they are distinct ExtraTrees
+    # variants, not because of what they used to read.
+    XA_tr, XAE = X_tr, XE
     emit("etaug", lambda fit, val: _et_mf(XA_tr[fit], y[fit], XAE(val), classes,
                                           0.25, 3, 10 if is_test else 5), n_out)
     emit("etaug2", lambda fit, val: _et_mf(XA_tr[fit], y[fit], XAE(val), classes,
                                            0.10, 1, 10 if is_test else 5), n_out)
-    emit("xgbaug", lambda fit, val: _xgb(XA_tr[fit], y[fit], XAE(val), classes,
-                                         3 if is_test else 1), n_out)
-    emit("mlpaug", lambda fit, val: _mlp(XA_tr[fit], y[fit], XAE(val), classes,
-                                         12 if is_test else 6), n_out)
     emit("et", lambda fit, val: M.fit_extra_trees(
         X_tr[fit], pd.Series(y[fit]), list(classes), XE(val),
         seeds=tuple(range(20 if is_test else 5))), n_out)
@@ -368,7 +341,6 @@ def experts(seed):
                                           12 if is_test else 6, hidden=(1024,),
                                           dropout=0.45, wd=5e-2), n_out)
     emit("nb", lambda fit, val: _count_bayes(ctr[fit], y[fit], CE(val), classes), n_out)
-    emit("sni", lambda fit, val: np.maximum(XE(val)[:, sni_sl], 1e-6), n_out)
     emit("meta", lambda fit, val: _meta_prior(
         meta_train if not is_test else pd.concat([meta_train, meta_test]),
         y, fit, val if not is_test else np.arange(len(meta_train), len(meta_train) + len(X_te)),
@@ -469,9 +441,8 @@ def submit(tag="clean"):
     z[~glia_te] = pool_apply(tl[:, ~glia_te], *fits["neuron"], lp, tallow[~glia_te])
     pred = classes[z.argmax(1)]
 
-    example = pd.read_csv("prediction/prediction.csv", nrows=0)
     sub = pd.DataFrame({"Cell_ID": meta_test.index.astype(str),
-                        example.columns[1]: pred})
+                        SUBMISSION_COLUMN: pred})
     assert len(sub) == len(meta_test) and not sub.Cell_ID.duplicated().any()
     assert np.array_equal(sub.Cell_ID.to_numpy(), meta_test.index.astype(str).to_numpy())
     assert set(pred) <= set(classes) and sub.iloc[:, 1].notna().all()
